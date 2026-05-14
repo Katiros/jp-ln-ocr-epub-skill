@@ -1,100 +1,303 @@
 # JP LN OCR EPUB Skill
 
-Codex/OpenClaw skill for Japanese vertical light-novel OCR, review-first Chinese translation, DOCX review files, and later EPUB packaging.
+这是一个面向 **竖排日文轻小说扫图** 的 Codex / OpenClaw skill。
 
-## Quick Setup on Windows
+目标不是“一键直接出 EPUB”，而是按更适合校对的顺序处理：
 
-GPU CUDA 13.0:
+```text
+扫图文件夹
+-> PaddleOCR
+-> 竖排阅读顺序恢复
+-> OCR Word 审阅
+-> DeepSeek 翻译
+-> 翻译 Word 审阅
+-> 最后制作 EPUB
+```
+
+也就是说，EPUB 是最后的包装步骤。OCR 和翻译没有审完之前，不建议直接生成 EPUB。
+
+## 第一次使用
+
+### 1. 安装依赖
+
+Windows + NVIDIA GPU + CUDA 13.0：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1 -Mode gpu-cu130
 ```
 
-CPU fallback:
+没有 GPU，或 GPU 环境装不起来时：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1 -Mode cpu
 ```
 
-The installer creates `.venv`, installs Paddle/PaddleOCR and helper libraries, and checks the environment.
+安装脚本会自动：
 
-## Configure
+- 创建 `.venv`
+- 安装 PaddlePaddle / PaddleOCR
+- 安装 Word 导出依赖 `python-docx`
+- 安装 `Pillow`、`PyYAML`
+- 默认使用清华 PyPI 镜像
+- 检查 PaddleOCR 环境
 
-Copy and edit:
+### 2. 复制配置文件
+
+不要直接改 `assets/config.example.yaml`。请复制一份到仓库根目录：
 
 ```powershell
 Copy-Item assets\config.example.yaml config.yaml
 ```
 
-Set:
+然后编辑：
+
+```text
+config.yaml
+```
+
+`config.yaml` 已经在 `.gitignore` 里，不会被提交到 GitHub。
+
+## 必须配置哪些内容
+
+打开 `config.yaml`，通常只需要先改这几块。
+
+### 输入目录
 
 ```yaml
 input:
-  path: "C:/path/to/book/images"
-
-output:
-  dir: "C:/path/to/output"
+  path: "C:/Users/Katiros/Desktop/EPUB/創約12/扫图"
 ```
 
-For translation, set:
+这里填整本轻小说图片所在文件夹。
+
+### 输出目录
+
+```yaml
+output:
+  dir: "G:/code/novel-output/souyaku12"
+```
+
+所有 OCR、Word、日志、术语表都会输出到这里。
+
+### OCR 设备
+
+GPU：
+
+```yaml
+ocr:
+  device: gpu
+```
+
+CPU：
+
+```yaml
+ocr:
+  device: cpu
+```
+
+### DeepSeek API
+
+配置文件默认读取环境变量：
+
+```yaml
+translation:
+  api_key_env: DEEPSEEK_API_KEY
+```
+
+使用前设置：
 
 ```powershell
-$env:DEEPSEEK_API_KEY="your_key"
+$env:DEEPSEEK_API_KEY="你的 DeepSeek API Key"
 ```
 
-## Run Stages
+如果只是 OCR 和 Word 审阅，暂时不需要配置 DeepSeek。
 
-Scan image folder:
+### EPUB 模板
+
+EPUB 阶段还在后面。以后要做 EPUB 时再填：
+
+```yaml
+epub:
+  template: "C:/path/to/template.epub"
+```
+
+## 推荐运行顺序
+
+下面假设你已经复制并编辑了 `config.yaml`。
+
+### 1. 扫描图片目录
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\book_pipeline.py scan --config config.yaml
 ```
 
-OCR a page range:
+会生成：
+
+```text
+输出目录/00_manifest/manifest.json
+```
+
+它记录每张图片的顺序、页面类型、OCR 状态等。
+
+### 2. OCR 指定页码范围
+
+例如只跑第 12 到 60 页：
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\ocr_paddle_book.py --config config.yaml --start-page 12 --end-page 60
 ```
 
-Clean OCR and extract glossary candidates:
+会生成：
+
+```text
+02_ocr_raw/      OCR 紧凑 JSON
+03_ordered_jp/   竖排排序后的每页日文
+logs/quality_report.md
+```
+
+### 3. 清洗 OCR 并抽取术语候选
+
+把下面命令里的 `输出目录` 换成你 `config.yaml` 里的 `output.dir`。
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\clean_ocr_japanese.py `
-  --input-dir output\03_ordered_jp `
-  --output-dir output\04_cleaned_jp `
-  --glossary-csv output\05_glossary\glossary_candidates.csv `
-  --warnings-md output\logs\cleanup_warnings.md
+  --input-dir 输出目录\03_ordered_jp `
+  --output-dir 输出目录\04_cleaned_jp `
+  --glossary-csv 输出目录\05_glossary\glossary_candidates.csv `
+  --warnings-md 输出目录\logs\cleanup_warnings.md
 ```
 
-Detect chapter boundaries:
+会生成：
+
+```text
+04_cleaned_jp/                         清洗后的日文
+05_glossary/glossary_candidates.csv     术语候选
+logs/cleanup_warnings.md                疑似 ruby 混入/异常行警告
+```
+
+### 4. 检测章节边界
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\detect_chapters.py `
-  --input-dir output\04_cleaned_jp `
-  --output output\00_manifest\chapter_boundaries.json
+  --input-dir 输出目录\04_cleaned_jp `
+  --output 输出目录\00_manifest\chapter_boundaries.json
 ```
 
-Write Chinese output guide:
+用于判断：
+
+```text
+第一章从哪一页开始
+第二章从哪一页开始
+某章应该包含哪些页
+```
+
+### 5. 生成中文输出说明
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\write_output_readme.py --output-dir output
+.\.venv\Scripts\python.exe scripts\write_output_readme.py --output-dir 输出目录
 ```
 
-Export DOCX review files:
+会生成：
+
+```text
+README_OUTPUTS.md
+```
+
+这份文件是中文的，会解释输出目录里每个文件夹的作用。
+
+### 6. 导出 Word 审阅文件
+
+示例：
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\export_docx_chapter.py `
   --title "第一章 白与黑的景色中" `
-  --jp output\04_cleaned_jp\chapter_01.jp.md `
-  --zh output\06_translated_zh\chapter_01.zh.md `
-  --output-dir output\chapters `
+  --jp 输出目录\04_cleaned_jp\chapter_01.jp.md `
+  --zh 输出目录\06_translated_zh\chapter_01.zh.md `
+  --output-dir 输出目录\chapters `
   --prefix ch001
 ```
 
-## Review-First Workflow
+会生成：
 
-Do not build EPUB before review:
+```text
+chapters/ch001_ocr.docx
+chapters/ch001_zh.docx
+chapters/ch001_bilingual.docx
+```
 
-1. OCR review in Word.
-2. Translation review in Word.
-3. EPUB packaging after both are stable.
+如果还没有中文译文，可以先只导出 OCR Word，用来校对日文。
+
+## 输出目录怎么看
+
+默认会按阶段放文件：
+
+```text
+00_manifest/       页序、章节边界、处理状态
+02_ocr_raw/        PaddleOCR 紧凑 JSON
+03_ordered_jp/     按竖排顺序恢复后的每页日文
+04_cleaned_jp/     清洗后的日文和章节合并稿
+05_glossary/       术语候选/术语表
+06_translated_zh/  中文译文
+chapters/          Word 审阅文件
+logs/              质量报告和警告
+```
+
+普通审阅时，优先看：
+
+```text
+chapters/
+README_OUTPUTS.md
+logs/quality_report.md
+logs/cleanup_warnings.md
+```
+
+## 不会提交到 GitHub 的文件
+
+下面这些已经写进 `.gitignore`：
+
+```text
+config.yaml
+.env
+output/
+outputs/
+workspace/
+02_ocr_raw/
+03_ordered_jp/
+04_cleaned_jp/
+05_glossary/
+06_translated_zh/
+chapters/
+logs/
+*.whl
+official_models/
+```
+
+所以你的真实配置、API Key、OCR 输出、Word 文件、EPUB 工作目录不会被提交。
+
+仓库里只保留示例配置：
+
+```text
+assets/config.example.yaml
+```
+
+## 当前能力边界
+
+已经可用：
+
+- 扫描整本图片文件夹
+- PaddleOCR 批量识别
+- 竖排从右到左排序
+- 生成 OCR 质量报告
+- 章节边界检测
+- 术语候选抽取
+- Word 审阅文件导出
+- 中文输出说明生成
+
+仍需继续完善：
+
+- ruby / 振假名精准剥离
+- 复杂人物介绍页、彩页说明页分类
+- 更自然的段落合并
+- EPUB 自动制作
+

@@ -36,6 +36,22 @@ Prefer local deterministic tools for OCR and packaging:
 
 Do not use DeepSeek for OCR unless the user explicitly has a vision/OCR-capable DeepSeek endpoint. Use DeepSeek for translation after OCR.
 
+## Windows Setup
+
+Prefer the bundled setup script instead of manual `pip` commands:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1 -Mode gpu-cu130
+```
+
+Use CPU mode when GPU/CUDA is unavailable:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1 -Mode cpu
+```
+
+The script creates `.venv`, installs Paddle/PaddleOCR and DOCX dependencies, uses a China mainland PyPI mirror by default, and runs an environment check.
+
 ## Review Gates
 
 Do not rush from OCR to translation or from translation to EPUB. Use explicit review gates:

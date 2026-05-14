@@ -196,6 +196,26 @@ output/
   final.epub
 ```
 
+## User-Facing Language
+
+Use Simplified Chinese for user-facing review artifacts by default:
+
+- `README_OUTPUTS.md`
+- `quality_report.md`
+- `cleanup_warnings.md`
+- DOCX headings and review notes
+- translation notes and glossary review instructions
+
+Keep technical directory names and machine-readable keys in English for tool compatibility:
+
+- `00_manifest`
+- `02_ocr_raw`
+- `03_ordered_jp`
+- `chapter_boundaries.json`
+- JSON/YAML/CSV field names
+
+If the user requests another language, follow that request for user-facing files only.
+
 ## Batch/Resume Rules
 
 Full books are long-running. Always support resume behavior:

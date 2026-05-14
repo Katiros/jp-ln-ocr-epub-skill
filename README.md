@@ -74,6 +74,12 @@ Detect chapter boundaries:
   --output output\00_manifest\chapter_boundaries.json
 ```
 
+Write Chinese output guide:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\write_output_readme.py --output-dir output
+```
+
 Export DOCX review files:
 
 ```powershell
@@ -92,4 +98,3 @@ Do not build EPUB before review:
 1. OCR review in Word.
 2. Translation review in Word.
 3. EPUB packaging after both are stable.
-

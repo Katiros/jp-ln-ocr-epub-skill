@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("scan", "ocr", "clean", "detect-chapters", "export-docx")]
+    [ValidateSet("scan", "ocr", "clean", "detect-chapters", "write-readme", "export-docx")]
     [string]$Step,
 
     [string]$Config = "assets\config.example.yaml",
@@ -43,8 +43,11 @@ switch ($Step) {
             --input-dir (Join-Path $OutputDir "04_cleaned_jp") `
             --output (Join-Path $OutputDir "00_manifest\chapter_boundaries.json")
     }
+    "write-readme" {
+        if (-not $OutputDir) { throw "OutputDir is required for write-readme." }
+        & $PythonExe "scripts\write_output_readme.py" --output-dir $OutputDir
+    }
     "export-docx" {
         throw "Use scripts\export_docx_chapter.py directly for now because it needs chapter file paths."
     }
 }
-

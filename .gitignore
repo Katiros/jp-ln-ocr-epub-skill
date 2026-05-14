@@ -5,3 +5,35 @@ venv/
 *.log
 .DS_Store
 Thumbs.db
+
+# Local user configuration and secrets
+config.yaml
+config.local.yaml
+*.local.yaml
+.env
+.env.*
+!.env.example
+
+# Generated book workspaces
+output/
+outputs/
+workspace/
+workspaces/
+epub_work/
+00_manifest/
+01_preprocessed/
+02_ocr_raw/
+03_ordered_jp/
+04_cleaned_jp/
+05_glossary/
+06_translated_zh/
+07_bilingual/
+chapters/
+logs/
+
+# Model/cache artifacts
+official_models/
+*.onnx
+*.pdmodel
+*.pdiparams
+*.whl

@@ -1,0 +1,110 @@
+project:
+  title: ""
+  source_lang: ja
+  target_lang: zh-CN
+
+input:
+  path: "G:/books/example/images"
+  file_patterns:
+    - "*.jpg"
+    - "*.jpeg"
+    - "*.png"
+    - "*.webp"
+  sort: natural
+
+output:
+  dir: "G:/books/example/output"
+  formats:
+    - markdown
+    - docx
+    - epub
+  bilingual: true
+  save_ocr_json: true
+
+runtime:
+  resume: true
+  cache_ocr: true
+  cache_translation: true
+  skip_existing: true
+
+ocr:
+  engine: paddleocr
+  device: gpu
+  lang: japan
+  model: PP-OCRv5
+  layout: vertical-rl
+  detect_orientation: true
+  classify_pages: true
+  skip_illustrations: true
+  confidence_threshold: 0.82
+  ruby_mode: extract
+  preprocess:
+    deskew: true
+    denoise: true
+    crop_margins: true
+
+page_classification:
+  enabled: true
+  text_density_threshold: 0.08
+  blank_threshold: 0.01
+  illustration_text_ratio_threshold: 0.03
+  keep_illustrations: true
+
+layout:
+  writing_mode: vertical-rl
+  remove_page_number: true
+  preserve_section_marker: true
+  detect_ruby: true
+  ruby_mode: extract
+  min_main_text_size_ratio: 1.0
+  ruby_size_ratio: 0.65
+
+cleaning:
+  normalize_punctuation: true
+  fix_common_ocr_errors: true
+  merge_line_breaks: true
+  preserve_dialogue_breaks: true
+
+segmentation:
+  split_by_chapter: true
+  split_by_section_marker: true
+  max_japanese_chars_per_chunk: 2500
+  overlap_paragraphs: 2
+
+review:
+  stop_after_ocr: true
+  stop_after_translation: true
+  require_review_before_epub: true
+  quality_report: true
+
+translation:
+  provider: deepseek
+  model_fast: deepseek-v4-flash
+  model_quality: deepseek-v4-pro
+  api_key_env: DEEPSEEK_API_KEY
+  base_url: "https://api.deepseek.com"
+  endpoint: "https://api.deepseek.com/chat/completions"
+  mode: paragraph
+  glossary: "05_glossary/glossary.yaml"
+  style: light_novel_cn
+  context:
+    previous_paragraphs: 3
+    chapter_summary: true
+
+docx:
+  split_by_chapter: true
+  styles:
+    chapter_title: "Chapter Title"
+    jp_original: "JP Original"
+    cn_translation: "CN Translation"
+    ocr_warning: "OCR Warning"
+    illustration_ref: "Illustration Ref"
+
+epub:
+  template: "G:/books/templates/release_template.epub"
+  output_name: "final.epub"
+  preserve_css: true
+  preserve_fonts: true
+  preserve_cover: true
+  generate_toc: true
+  split_by_chapter: true

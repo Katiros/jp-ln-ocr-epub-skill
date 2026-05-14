@@ -228,6 +228,30 @@ chapters/ch001_bilingual.docx
 
 如果还没有中文译文，可以先只导出 OCR Word，用来校对日文。
 
+### 7. 生成“人工复核中心”
+
+```powershell
+.\.venv\Scripts\python.exe scripts\build_review_pack.py --output-dir 输出目录
+```
+
+会生成：
+
+```text
+08_review/
+  README_REVIEW.md
+  low_confidence_pages.md
+  cleanup_warnings.md
+  glossary_candidates.csv
+  chapter_boundaries_review.md
+  docx_review_index.md
+```
+
+之后人工审阅时，优先打开：
+
+```text
+08_review/README_REVIEW.md
+```
+
 ## 输出目录怎么看
 
 默认会按阶段放文件：
@@ -239,6 +263,7 @@ chapters/ch001_bilingual.docx
 04_cleaned_jp/     清洗后的日文和章节合并稿
 05_glossary/       术语候选/术语表
 06_translated_zh/  中文译文
+08_review/         人工复核中心
 chapters/          Word 审阅文件
 logs/              质量报告和警告
 ```
@@ -246,6 +271,7 @@ logs/              质量报告和警告
 普通审阅时，优先看：
 
 ```text
+08_review/
 chapters/
 README_OUTPUTS.md
 logs/quality_report.md
@@ -267,6 +293,7 @@ workspace/
 04_cleaned_jp/
 05_glossary/
 06_translated_zh/
+08_review/
 chapters/
 logs/
 *.whl
@@ -300,4 +327,3 @@ assets/config.example.yaml
 - 复杂人物介绍页、彩页说明页分类
 - 更自然的段落合并
 - EPUB 自动制作
-

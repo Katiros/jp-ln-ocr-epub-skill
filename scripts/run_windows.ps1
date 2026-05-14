@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("scan", "ocr", "clean", "detect-chapters", "write-readme", "export-docx")]
+    [ValidateSet("scan", "ocr", "clean", "detect-chapters", "write-readme", "review-pack", "export-docx")]
     [string]$Step,
 
     [string]$Config = "assets\config.example.yaml",
@@ -46,6 +46,10 @@ switch ($Step) {
     "write-readme" {
         if (-not $OutputDir) { throw "OutputDir is required for write-readme." }
         & $PythonExe "scripts\write_output_readme.py" --output-dir $OutputDir
+    }
+    "review-pack" {
+        if (-not $OutputDir) { throw "OutputDir is required for review-pack." }
+        & $PythonExe "scripts\build_review_pack.py" --output-dir $OutputDir
     }
     "export-docx" {
         throw "Use scripts\export_docx_chapter.py directly for now because it needs chapter file paths."

@@ -28,6 +28,7 @@ OUTPUT_DIRS = (
     "05_glossary",
     "06_translated_zh",
     "07_bilingual",
+    "08_review",
     "logs",
 )
 
@@ -179,4 +180,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -180,6 +180,13 @@ output/
     chapter_01.zh.md
   07_bilingual/
     chapter_01.bilingual.md
+  08_review/
+    README_REVIEW.md
+    low_confidence_pages.md
+    cleanup_warnings.md
+    glossary_candidates.csv
+    chapter_boundaries_review.md
+    docx_review_index.md
   logs/
     quality_report.md
     errors.json
@@ -234,6 +241,7 @@ This skill currently provides executable scripts for:
 - `scripts/clean_ocr_japanese.py`: first-pass Japanese cleanup, section marker preservation, ruby-contamination warnings, and glossary candidate extraction.
 - `scripts/deepseek_translate.py`: single reviewed text file translation with DeepSeek.
 - `scripts/export_docx_chapter.py`: export reviewed Japanese Markdown and optional Chinese Markdown to `*_ocr.docx`, `*_zh.docx`, and `*_bilingual.docx`.
+- `scripts/build_review_pack.py`: collect human-review materials into `08_review/`.
 
 Treat DOCX chapter export, chapter merge, and EPUB packaging as later stages unless the user asks to implement them.
 

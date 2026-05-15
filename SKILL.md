@@ -174,6 +174,16 @@ Do not rush from OCR to translation or from translation to EPUB. Use explicit re
    - Confirm glossary is updated.
    - Confirm EPUB opens structurally: mimetype, container, OPF, spine, nav/NCX as applicable.
 
+13. **Clean temporary files**
+   - After a completed run, remove disposable temp folders and Python script caches.
+   - Keep review artifacts, OCR JSON, ordered Japanese text, cleaned Japanese text, glossary CSV, DOCX, and logs.
+   - Do not delete `.cache/wheels`, downloaded OCR models, or `.venv` by default; they are reusable runtime assets.
+   - Command:
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File scripts/run_windows.ps1 -Step cleanup -OutputDir <output_dir>
+     ```
+   - Only use `-IncludeVenvPycache` for a deep cleanup when startup speed is less important than disk cleanup.
+
 ## Output Layout
 
 Use this layout unless the user asks otherwise:

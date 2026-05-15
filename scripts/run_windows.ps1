@@ -1,12 +1,14 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("scan", "ocr", "clean", "detect-chapters", "import-wiki-glossary", "write-readme", "review-pack", "export-docx")]
+    [ValidateSet("doctor", "scan", "ocr", "clean", "detect-chapters", "merge-chapters", "import-wiki-glossary", "write-readme", "review-pack", "export-docx", "cleanup", "first-chapter-review")]
     [string]$Step,
 
     [string]$Config = "assets\config.example.yaml",
     [string]$OutputDir = "",
     [int]$StartPage = 0,
-    [int]$EndPage = 0
+    [int]$EndPage = 0,
+    [int]$Chapter = 1,
+    [switch]$IncludeVenvPycache
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,6 +30,9 @@ if (-not (Test-Path $PythonExe)) {
 }
 
 switch ($Step) {
+    "doctor" {
+        & $PythonExe "scripts\doctor.py"
+    }
     "scan" {
         & $PythonExe "scripts\book_pipeline.py" scan --config $Config
     }
@@ -52,6 +57,14 @@ switch ($Step) {
             --input-dir (Join-Path $OutputDir "04_cleaned_jp") `
             --output (Join-Path $OutputDir "00_manifest\chapter_boundaries.json")
     }
+    "merge-chapters" {
+        if (-not $OutputDir) { throw "OutputDir is required for merge-chapters." }
+        & $PythonExe "scripts\merge_chapter_pages.py" `
+            --input-dir (Join-Path $OutputDir "04_cleaned_jp") `
+            --boundaries (Join-Path $OutputDir "00_manifest\chapter_boundaries.json") `
+            --output-dir (Join-Path $OutputDir "04_cleaned_jp") `
+            --chapter $Chapter
+    }
     "import-wiki-glossary" {
         if (-not $OutputDir) { throw "OutputDir is required for import-wiki-glossary." }
         & $PythonExe "scripts\import_wiki_glossary.py" `
@@ -67,6 +80,54 @@ switch ($Step) {
         & $PythonExe "scripts\build_review_pack.py" --output-dir $OutputDir
     }
     "export-docx" {
-        throw "Use scripts\export_docx_chapter.py directly for now because it needs chapter file paths."
+        if (-not $OutputDir) { throw "OutputDir is required for export-docx." }
+        $prefix = "ch{0:D3}" -f $Chapter
+        $jp = Join-Path $OutputDir ("04_cleaned_jp\chapter_{0:D2}.jp.md" -f $Chapter)
+        $zh = Join-Path $OutputDir ("06_translated_zh\chapter_{0:D2}.zh.md" -f $Chapter)
+        $args = @(
+            "scripts\export_docx_chapter.py",
+            "--title", ("Chapter {0}" -f $Chapter),
+            "--jp", $jp,
+            "--output-dir", (Join-Path $OutputDir "chapters"),
+            "--prefix", $prefix
+        )
+        if (Test-Path $zh) { $args += @("--zh", $zh) }
+        & $PythonExe @args
+    }
+    "cleanup" {
+        $args = @("scripts\cleanup_runtime.py", "--runtime")
+        if ($OutputDir) { $args += @("--output-dir", $OutputDir) }
+        if ($IncludeVenvPycache) { $args += @("--include-venv-pycache") }
+        & $PythonExe @args
+    }
+    "first-chapter-review" {
+        if (-not $OutputDir) { throw "OutputDir is required for first-chapter-review." }
+        & $PythonExe "scripts\book_pipeline.py" scan --config $Config
+        $ocrArgs = @("scripts\ocr_paddle_book.py", "--config", $Config, "--output-dir", $OutputDir)
+        if ($StartPage -gt 0) { $ocrArgs += @("--start-page", "$StartPage") }
+        if ($EndPage -gt 0) { $ocrArgs += @("--end-page", "$EndPage") }
+        & $PythonExe @ocrArgs
+        & $PythonExe "scripts\clean_ocr_japanese.py" `
+            --input-dir (Join-Path $OutputDir "03_ordered_jp") `
+            --output-dir (Join-Path $OutputDir "04_cleaned_jp") `
+            --glossary-csv (Join-Path $OutputDir "05_glossary\glossary_candidates.csv") `
+            --warnings-md (Join-Path $OutputDir "logs\cleanup_warnings.md")
+        & $PythonExe "scripts\detect_chapters.py" `
+            --input-dir (Join-Path $OutputDir "04_cleaned_jp") `
+            --output (Join-Path $OutputDir "00_manifest\chapter_boundaries.json")
+        & $PythonExe "scripts\merge_chapter_pages.py" `
+            --input-dir (Join-Path $OutputDir "04_cleaned_jp") `
+            --boundaries (Join-Path $OutputDir "00_manifest\chapter_boundaries.json") `
+            --output-dir (Join-Path $OutputDir "04_cleaned_jp") `
+            --chapter $Chapter
+        $prefix = "ch{0:D3}" -f $Chapter
+        & $PythonExe "scripts\export_docx_chapter.py" `
+            --title ("Chapter {0}" -f $Chapter) `
+            --jp (Join-Path $OutputDir ("04_cleaned_jp\chapter_{0:D2}.jp.md" -f $Chapter)) `
+            --output-dir (Join-Path $OutputDir "chapters") `
+            --prefix $prefix
+        & $PythonExe "scripts\write_output_readme.py" --output-dir $OutputDir
+        & $PythonExe "scripts\build_review_pack.py" --output-dir $OutputDir
+        & $PythonExe "scripts\cleanup_runtime.py" --output-dir $OutputDir --runtime
     }
 }

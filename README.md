@@ -311,6 +311,67 @@ chapters/ch001_bilingual.docx
 08_review/README_REVIEW.md
 ```
 
+### 8. 一键生成第一章 OCR 审阅包
+
+如果是让 OpenClaw 或其他 agent 调用，优先使用这个封装步骤，避免它只跑一半流程：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
+  -Step first-chapter-review `
+  -Config config.yaml `
+  -OutputDir 输出目录 `
+  -StartPage 12 `
+  -EndPage 60 `
+  -Chapter 1
+```
+
+这个步骤会自动执行：
+
+```text
+scan -> OCR -> clean -> detect-chapters -> merge chapter -> export DOCX -> README_OUTPUTS -> 08_review -> cleanup
+```
+
+它默认只生成 OCR 审阅稿，不会调用 DeepSeek 翻译，也不会制作 EPUB。
+
+### 9. 清理临时缓存
+
+普通运行结束后可以执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
+  -Step cleanup `
+  -OutputDir 输出目录
+```
+
+会清理：
+
+- 输出目录里的 `temp/`、`tmp/`、`__pycache__/`、`.tmp` 文件
+- skill 目录下 `.cache/paddlex/temp`
+- PaddleX 模型目录里残留的 `._____temp`
+- `scripts/__pycache__`
+
+不会清理：
+
+- `02_ocr_raw/`
+- `03_ordered_jp/`
+- `04_cleaned_jp/`
+- `05_glossary/`
+- `08_review/`
+- `chapters/`
+- `.venv/`
+- 已下载的 OCR 模型
+
+如果你想连 `.venv` 里的 Python 编译缓存也清掉，可以加：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
+  -Step cleanup `
+  -OutputDir 输出目录 `
+  -IncludeVenvPycache
+```
+
+这会释放一些空间，但下次启动 Python 包时可能会稍慢。
+
 ## 输出目录怎么看
 
 默认会按阶段放文件：

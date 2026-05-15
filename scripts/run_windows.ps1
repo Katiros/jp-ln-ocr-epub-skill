@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("scan", "ocr", "clean", "detect-chapters", "write-readme", "review-pack", "export-docx")]
+    [ValidateSet("scan", "ocr", "clean", "detect-chapters", "import-wiki-glossary", "write-readme", "review-pack", "export-docx")]
     [string]$Step,
 
     [string]$Config = "assets\config.example.yaml",
@@ -42,6 +42,12 @@ switch ($Step) {
         & $PythonExe "scripts\detect_chapters.py" `
             --input-dir (Join-Path $OutputDir "04_cleaned_jp") `
             --output (Join-Path $OutputDir "00_manifest\chapter_boundaries.json")
+    }
+    "import-wiki-glossary" {
+        if (-not $OutputDir) { throw "OutputDir is required for import-wiki-glossary." }
+        & $PythonExe "scripts\import_wiki_glossary.py" `
+            --terms-csv (Join-Path $OutputDir "05_glossary\glossary_candidates.csv") `
+            --output (Join-Path $OutputDir "05_glossary\wiki_glossary_candidates.csv")
     }
     "write-readme" {
         if (-not $OutputDir) { throw "OutputDir is required for write-readme." }

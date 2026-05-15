@@ -191,6 +191,38 @@ logs/cleanup_warnings.md                疑似 ruby 混入/异常行警告
 某章应该包含哪些页
 ```
 
+### 4.5. 从 wiki 预填术语候选
+
+如果目标作品有 wiki，可以先用 OCR 抽出的术语候选去 wiki 搜索，减少人工确认量。默认脚本指向《魔法禁书目录》灰机 wiki 的 MediaWiki API：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\import_wiki_glossary.py `
+  --terms-csv 输出目录\05_glossary\glossary_candidates.csv `
+  --output 输出目录\05_glossary\wiki_glossary_candidates.csv
+```
+
+生成的 `wiki_glossary_candidates.csv` 仍然需要人工确认，不会直接覆盖你的术语表。
+
+如果 wiki API 返回 `403 Forbidden`，可以在浏览器里手动整理/导出一份 CSV，再用：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\import_wiki_glossary.py `
+  --manual-csv 手动整理的wiki术语.csv `
+  --output 输出目录\05_glossary\wiki_glossary_candidates.csv
+```
+
+手动 CSV 至少包含这些列之一即可：
+
+```text
+source,reading,zh
+```
+
+或：
+
+```text
+日文,假名,中文
+```
+
 ### 5. 生成中文输出说明
 
 ```powershell
@@ -318,6 +350,7 @@ assets/config.example.yaml
 - 生成 OCR 质量报告
 - 章节边界检测
 - 术语候选抽取
+- 从 MediaWiki wiki 预填术语候选
 - Word 审阅文件导出
 - 中文输出说明生成
 

@@ -115,6 +115,9 @@ Do not rush from OCR to translation or from translation to EPUB. Use explicit re
 5. **Build glossary candidates**
    - Extract likely person names, katakana names, terms joined by `=`, `＝`, `・`, and special ruby pairs.
    - Write candidates to `05_glossary/glossary_candidates.csv`.
+   - If a relevant wiki is configured, use `scripts/import_wiki_glossary.py` to prefill `05_glossary/wiki_glossary_candidates.csv`.
+   - If the wiki API blocks automated access, import a manually exported CSV with `--manual-csv`.
+   - Treat wiki results as review candidates, not final truth; the user confirms `zh` and `status`.
    - Do not force final Chinese renderings automatically; mark them `pending_review`.
 
 6. **Rebuild paragraphs**
@@ -239,6 +242,7 @@ This skill currently provides executable scripts for:
 - `scripts/book_pipeline.py scan`: image discovery, natural sorting, numbered output directory setup, and manifest creation.
 - `scripts/ocr_paddle_book.py`: PaddleOCR batch OCR, raw JSON output, simple vertical right-to-left ordering, OCR-derived page classification, and quality report generation.
 - `scripts/clean_ocr_japanese.py`: first-pass Japanese cleanup, section marker preservation, ruby-contamination warnings, and glossary candidate extraction.
+- `scripts/import_wiki_glossary.py`: import glossary candidates from a MediaWiki-compatible wiki such as Toaru HuijiWiki.
 - `scripts/deepseek_translate.py`: single reviewed text file translation with DeepSeek.
 - `scripts/export_docx_chapter.py`: export reviewed Japanese Markdown and optional Chinese Markdown to `*_ocr.docx`, `*_zh.docx`, and `*_bilingual.docx`.
 - `scripts/build_review_pack.py`: collect human-review materials into `08_review/`.

@@ -107,6 +107,9 @@ def write_glossary_review(output_dir: Path, review_dir: Path) -> None:
     src = output_dir / "05_glossary" / "glossary_candidates.csv"
     dst = review_dir / "glossary_candidates.csv"
     copied = copy_if_exists(src, dst)
+    wiki_src = output_dir / "05_glossary" / "wiki_glossary_candidates.csv"
+    wiki_dst = review_dir / "wiki_glossary_candidates.csv"
+    wiki_copied = copy_if_exists(wiki_src, wiki_dst)
     lines = ["# 术语表复核", ""]
     if not copied:
         lines.append("- 未找到 `05_glossary/glossary_candidates.csv`。")
@@ -119,6 +122,9 @@ def write_glossary_review(output_dir: Path, review_dir: Path) -> None:
         lines.append(f"- 已复制术语候选：`{count}` 条。")
         lines.append("- 请确认人名、组织名、魔法/术式名和固定译名。")
         lines.append("- 确认后可把 `status` 改为 `confirmed`，并填写 `zh`。")
+    if wiki_copied:
+        lines.append("- 已复制 wiki 预填充术语候选：`wiki_glossary_candidates.csv`。")
+        lines.append("- wiki 候选仍需人工确认，不会直接覆盖最终术语表。")
     (review_dir / "glossary_review.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -139,6 +145,7 @@ def write_readme(output_dir: Path, review_dir: Path) -> None:
         ("low_confidence_pages.md", "低置信度、OCR 错误和建议复核页面。"),
         ("cleanup_warnings.md", "疑似 ruby 混入、异常 OCR 行等清洗警告。"),
         ("glossary_candidates.csv", "自动抽取的人名/术语候选，需要人工确认。"),
+        ("wiki_glossary_candidates.csv", "从 wiki 预填充的人名/术语候选，需要人工确认。"),
         ("glossary_review.md", "术语表复核说明。"),
         ("chapter_boundaries_review.md", "章节边界检测结果的中文摘要。"),
         ("docx_review_index.md", "Word 审阅文件索引。"),
@@ -201,4 +208,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

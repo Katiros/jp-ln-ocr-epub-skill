@@ -77,6 +77,14 @@ review:
   require_review_before_epub: true
   quality_report: true
 
+glossary:
+  wiki:
+    enabled: true
+    api_url: "https://toaru.huijiwiki.com/api.php"
+    page_url: "https://toaru.huijiwiki.com/wiki/{title}"
+    per_term: 1
+    limit: 200
+
 translation:
   provider: deepseek
   model_fast: deepseek-v4-flash

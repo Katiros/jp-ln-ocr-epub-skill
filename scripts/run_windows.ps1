@@ -12,6 +12,15 @@ param(
 $ErrorActionPreference = "Stop"
 $SkillRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $SkillRoot
+$CacheRoot = Join-Path $SkillRoot ".cache"
+$env:PADDLE_HOME = Join-Path $CacheRoot "paddle"
+$env:PADDLEOCR_HOME = Join-Path $CacheRoot "paddleocr"
+$env:PADDLE_PDX_CACHE_HOME = Join-Path $CacheRoot "paddlex"
+$env:PADDLEX_HOME = Join-Path $CacheRoot "paddlex"
+$env:HF_HOME = Join-Path $CacheRoot "huggingface"
+$env:MODELSCOPE_CACHE = Join-Path $CacheRoot "modelscope"
+$env:PIP_CACHE_DIR = Join-Path $CacheRoot "pip"
+New-Item -ItemType Directory -Force -Path $CacheRoot,$env:PADDLE_HOME,$env:PADDLEOCR_HOME,$env:PADDLE_PDX_CACHE_HOME,$env:HF_HOME,$env:MODELSCOPE_CACHE,$env:PIP_CACHE_DIR | Out-Null
 
 $PythonExe = ".\.venv\Scripts\python.exe"
 if (-not (Test-Path $PythonExe)) {

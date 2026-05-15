@@ -52,6 +52,18 @@ powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1 -Mode cpu
 
 The script creates `.venv`, installs Paddle/PaddleOCR and DOCX dependencies, uses a China mainland PyPI mirror by default, and runs an environment check.
 
+The Windows setup is skill-local by default:
+
+```text
+.venv/             shared Python environment for Codex/OpenClaw
+.cache/wheels/     Paddle wheel cache
+.cache/paddle*/    Paddle/PaddleOCR cache
+.cache/paddlex/    PaddleX model cache
+.cache/pip/        pip cache
+```
+
+When Codex and OpenClaw run on the same machine, both should call `.venv\Scripts\python.exe` from this skill directory instead of creating separate environments.
+
 ## Review Gates
 
 Do not rush from OCR to translation or from translation to EPUB. Use explicit review gates:

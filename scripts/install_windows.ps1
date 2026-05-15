@@ -6,12 +6,20 @@ param(
 
     [string]$PypiIndex = "https://pypi.tuna.tsinghua.edu.cn/simple",
 
+    [string]$PythonPath = "",
+
     [switch]$SkipPaddle
 )
 
 $ErrorActionPreference = "Stop"
 
 function Resolve-Python {
+    if ($PythonPath) {
+        if (Test-Path $PythonPath) {
+            return (Resolve-Path $PythonPath).Path
+        }
+        throw "PythonPath does not exist: $PythonPath"
+    }
     $candidates = @("py", "python")
     foreach ($candidate in $candidates) {
         $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
@@ -29,8 +37,20 @@ function Invoke-Pip {
 
 $SkillRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $SkillRoot
+$CacheRoot = Join-Path $SkillRoot ".cache"
+$WheelDir = Join-Path $CacheRoot "wheels"
+$PipCache = Join-Path $CacheRoot "pip"
+$env:PADDLE_HOME = Join-Path $CacheRoot "paddle"
+$env:PADDLEOCR_HOME = Join-Path $CacheRoot "paddleocr"
+$env:PADDLE_PDX_CACHE_HOME = Join-Path $CacheRoot "paddlex"
+$env:PADDLEX_HOME = Join-Path $CacheRoot "paddlex"
+$env:HF_HOME = Join-Path $CacheRoot "huggingface"
+$env:MODELSCOPE_CACHE = Join-Path $CacheRoot "modelscope"
+$env:PIP_CACHE_DIR = $PipCache
+New-Item -ItemType Directory -Force -Path $CacheRoot,$WheelDir,$PipCache,$env:PADDLE_HOME,$env:PADDLEOCR_HOME,$env:PADDLE_PDX_CACHE_HOME,$env:HF_HOME,$env:MODELSCOPE_CACHE | Out-Null
 
 Write-Host "Skill root: $SkillRoot"
+Write-Host "Skill-local cache: $CacheRoot"
 $SystemPython = Resolve-Python
 Write-Host "Using Python launcher: $SystemPython"
 
@@ -49,7 +69,7 @@ Invoke-Pip @("install", "--upgrade", "pip", "setuptools", "wheel", "-i", $PypiIn
 
 if (-not $SkipPaddle) {
     if ($Mode -eq "gpu-cu130") {
-        $wheel = Join-Path $env:TEMP "paddlepaddle_gpu-3.3.1-cp312-cp312-win_amd64.whl"
+        $wheel = Join-Path $WheelDir "paddlepaddle_gpu-3.3.1-cp312-cp312-win_amd64.whl"
         $wheelUrl = "https://paddle-whl.bj.bcebos.com/stable/cu130/paddlepaddle-gpu/paddlepaddle_gpu-3.3.1-cp312-cp312-win_amd64.whl"
         if (-not (Test-Path $wheel)) {
             Write-Host "Downloading PaddlePaddle GPU wheel for CUDA 13.0..."
@@ -74,4 +94,3 @@ Write-Host "Done."
 Write-Host "Python: $script:PythonExe"
 Write-Host "Next:"
 Write-Host "  .\.venv\Scripts\python.exe scripts\book_pipeline.py scan --config assets\config.example.yaml"
-

@@ -11,33 +11,14 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 import statistics
-import site
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from env_bootstrap import configure_skill_local_env
 
 SKIP_KINDS_DEFAULT = {"cover", "illustration", "blank"}
-
-
-def add_nvidia_dll_dirs() -> None:
-    """Make pip-installed CUDA runtime DLLs visible on Windows."""
-    if os.name != "nt":
-        return
-    candidates: list[Path] = []
-    for site_dir in site.getsitepackages():
-        base = Path(site_dir) / "nvidia"
-        candidates.extend([base / "cu13" / "bin", base / "cu13" / "bin" / "x86_64", base / "cudnn" / "bin"])
-    existing = [path for path in candidates if path.exists()]
-    for path in existing:
-        try:
-            os.add_dll_directory(str(path))
-        except (AttributeError, OSError):
-            pass
-    if existing:
-        os.environ["PATH"] = os.pathsep.join([str(path) for path in existing] + [os.environ.get("PATH", "")])
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -265,7 +246,7 @@ def classify_after_ocr(page: dict[str, Any], lines: list[OCRLine], text_density:
 
 
 def make_ocr(device: str, lang: str, use_orientation: bool) -> Any:
-    add_nvidia_dll_dirs()
+    configure_skill_local_env()
     from paddleocr import PaddleOCR  # type: ignore
 
     kwargs: dict[str, Any] = {

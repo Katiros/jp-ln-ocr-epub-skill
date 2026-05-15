@@ -32,6 +32,14 @@ powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1 -Mode gpu-c
 powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1 -Mode cpu
 ```
 
+如果你的 Python 不在 PATH，可以显式指定：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1 `
+  -Mode gpu-cu130 `
+  -PythonPath "C:/Path/To/python.exe"
+```
+
 安装脚本会自动：
 
 - 创建 `.venv`
@@ -40,6 +48,25 @@ powershell -ExecutionPolicy Bypass -File scripts/install_windows.ps1 -Mode cpu
 - 安装 `Pillow`、`PyYAML`
 - 默认使用清华 PyPI 镜像
 - 检查 PaddleOCR 环境
+
+默认会把运行环境和缓存都放在 skill 目录下：
+
+```text
+.venv/              Python 虚拟环境
+.cache/wheels/      Paddle wheel 下载缓存
+.cache/paddle/      Paddle 缓存
+.cache/paddleocr/   PaddleOCR 缓存
+.cache/paddlex/     PaddleX/官方 OCR 模型缓存
+.cache/pip/         pip 缓存
+```
+
+Codex 和 OpenClaw 在同一台机器上使用时，建议都调用同一个解释器：
+
+```text
+.\.venv\Scripts\python.exe
+```
+
+这样不需要分别安装两套 PaddleOCR 环境。清理时删除 `.venv/` 和 `.cache/` 即可。
 
 ### 2. 复制配置文件
 
@@ -317,6 +344,8 @@ logs/cleanup_warnings.md
 ```text
 config.yaml
 .env
+.venv/
+.cache/
 output/
 outputs/
 workspace/

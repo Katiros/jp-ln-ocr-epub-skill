@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+.cache/
 *.log
 .DS_Store
 Thumbs.db

@@ -18,7 +18,10 @@ from pathlib import Path
 DEFAULT_ENDPOINT = "https://api.deepseek.com/chat/completions"
 
 
-SYSTEM_PROMPT = """You are translating a Japanese vertical light novel into Simplified Chinese.
+SYSTEM_PROMPT = """You are translating とある魔術の禁書目録 (A Certain Magical Index / 魔禁), the long-running light novel series by 鎌池和馬, from Japanese into Simplified Chinese.
+This is volume 12 of 創約 (Genesis Testament), the sequel series.
+You have training data on this series. Use your knowledge of established character names, organizations, abilities, and terminology.
+
 Preserve chapter structure, paragraph breaks, dialogue rhythm, names, honorific nuance, and glossary consistency.
 The glossary is a translation reference, not a mechanical replacement table. If a glossary line is clearly not an independent term in the current context, ignore that line.
 If the Japanese source appears corrupted by OCR, mark it as [OCR疑问: ...] and infer only when context is strong.

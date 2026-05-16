@@ -8,7 +8,9 @@ param(
     [int]$StartPage = 0,
     [int]$EndPage = 0,
     [int]$Chapter = 1,
-    [switch]$IncludeVenvPycache
+    [switch]$IncludeVenvPycache,
+    [string]$ManualWikiCsv = "",
+    [string]$ManualWikiText = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -67,9 +69,14 @@ switch ($Step) {
     }
     "import-wiki-glossary" {
         if (-not $OutputDir) { throw "OutputDir is required for import-wiki-glossary." }
-        & $PythonExe "scripts\import_wiki_glossary.py" `
-            --terms-csv (Join-Path $OutputDir "05_glossary\glossary_candidates.csv") `
-            --output (Join-Path $OutputDir "05_glossary\wiki_glossary_candidates.csv")
+        $args = @(
+            "scripts\import_wiki_glossary.py",
+            "--terms-csv", (Join-Path $OutputDir "05_glossary\glossary_candidates.csv"),
+            "--output", (Join-Path $OutputDir "05_glossary\wiki_glossary_candidates.csv")
+        )
+        if ($ManualWikiCsv) { $args += @("--manual-csv", $ManualWikiCsv) }
+        if ($ManualWikiText) { $args += @("--manual-text", $ManualWikiText) }
+        & $PythonExe @args
     }
     "write-readme" {
         if (-not $OutputDir) { throw "OutputDir is required for write-readme." }

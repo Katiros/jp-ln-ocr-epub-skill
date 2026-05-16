@@ -104,6 +104,94 @@ def read_manual_glossary(path: Path | None) -> list[dict[str, str]]:
     return rows
 
 
+def make_manual_row(path: Path, source: str, zh: str, reading: str = "", note: str = "") -> dict[str, str]:
+    source = clean_text(source)
+    zh = clean_text(zh)
+    reading = clean_text(reading)
+    title = zh or source
+    return {
+        "source": source or zh,
+        "reading": reading,
+        "zh": zh,
+        "type": "manual_wiki_candidate",
+        "status": "pending_review",
+        "note": note or f"imported from manual text: {path.name}",
+        "wiki_title": title,
+        "wiki_url": "",
+        "ja": source,
+    }
+
+
+def read_manual_text_glossary(path: Path | None) -> list[dict[str, str]]:
+    """Read glossary rows from browser-copied wiki text/HTML/Markdown.
+
+    Supported loose formats:
+    - labeled fields: 日文名：... / 中文名：... / 假名：...
+    - table-like lines: source<TAB>zh<TAB>reading, source|zh|reading
+    - simple mappings: source => zh, source = zh
+    """
+
+    if path is None or not path.exists():
+        return []
+    raw = path.read_text(encoding="utf-8", errors="ignore")
+    text = html.unescape(raw)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.I)
+    text = re.sub(r"</(?:p|tr|li|div|h\d)>", "\n", text, flags=re.I)
+    text = re.sub(r"<[^>]+>", "", text)
+    lines = [clean_text(line) for line in text.splitlines()]
+    rows: list[dict[str, str]] = []
+
+    for block in re.split(r"\n\s*\n+", text):
+        fields = extract_fields("", block)
+        if fields.get("ja") or fields.get("zh") or fields.get("reading"):
+            rows.append(
+                make_manual_row(
+                    path,
+                    fields.get("ja") or fields.get("zh") or "",
+                    fields.get("zh") or fields.get("ja") or "",
+                    fields.get("reading", ""),
+                    "matched labeled wiki fields",
+                )
+            )
+
+    for line in lines:
+        if not line or line.startswith(("#", "目录", "导航")):
+            continue
+        if re.search(r"(日文名|中文名|简中名|假名|读音|譯名|译名)\s*[=:：]", line):
+            fields = extract_fields("", line)
+            if fields.get("ja") or fields.get("zh"):
+                rows.append(
+                    make_manual_row(
+                        path,
+                        fields.get("ja") or fields.get("zh") or "",
+                        fields.get("zh") or fields.get("ja") or "",
+                        fields.get("reading", ""),
+                        "matched labeled wiki line",
+                    )
+                )
+            continue
+
+        if "\t" in line or "|" in line:
+            parts = [clean_text(part) for part in re.split(r"\t+|\s*\|\s*", line) if clean_text(part)]
+            if len(parts) >= 2 and not any(part in {"日文", "中文", "假名", "原文", "译名"} for part in parts[:2]):
+                reading = next((part for part in parts[2:] if re.fullmatch(r"[ぁ-ゖァ-ヴー・=\s]+", part)), "")
+                rows.append(make_manual_row(path, parts[0], parts[1], reading, "matched table-like wiki line"))
+            continue
+
+        match = re.match(r"(.{1,80}?)(?:\s*=>\s*|\s*[=＝:：]\s*)(.{1,80})$", line)
+        if match and not re.search(r"https?://", line):
+            rows.append(make_manual_row(path, match.group(1), match.group(2), "", "matched manual mapping line"))
+
+    deduped: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for row in rows:
+        key = (row["source"], row["zh"], row["reading"])
+        if row["source"] and key not in seen:
+            seen.add(key)
+            deduped.append(row)
+    return deduped
+
+
 def search_pages(api_url: str, term: str, per_term: int) -> list[str]:
     data = http_get_json(
         api_url,
@@ -229,6 +317,7 @@ def main() -> None:
     parser.add_argument("--terms-csv", help="Existing glossary_candidates.csv")
     parser.add_argument("--seed-file", help="Plain text seed terms, one per line")
     parser.add_argument("--manual-csv", help="Manually exported wiki glossary CSV to merge without API access")
+    parser.add_argument("--manual-text", help="Browser-saved/copied wiki text, Markdown, or HTML to parse without API access")
     parser.add_argument("--output", required=True)
     parser.add_argument("--limit", type=int, default=200)
     parser.add_argument("--per-term", type=int, default=1)
@@ -236,6 +325,7 @@ def main() -> None:
     args = parser.parse_args()
 
     manual_rows = read_manual_glossary(Path(args.manual_csv) if args.manual_csv else None)
+    manual_rows += read_manual_text_glossary(Path(args.manual_text) if args.manual_text else None)
     terms = read_seed_terms(Path(args.terms_csv) if args.terms_csv else None, args.limit)
     extra_terms = read_seed_terms(Path(args.seed_file) if args.seed_file else None, args.limit)
     for term in extra_terms:

@@ -250,6 +250,34 @@ source,reading,zh
 日文,假名,中文
 ```
 
+如果连 CSV 都懒得整理，也可以把浏览器里能打开的 wiki 页面复制到一个文本文件，例如：
+
+```text
+G:/code/wiki_seed/toaru_terms.txt
+```
+
+然后离线导入：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
+  -Step import-wiki-glossary `
+  -OutputDir 输出目录 `
+  -ManualWikiText G:/code/wiki_seed/toaru_terms.txt
+```
+
+`--manual-text` 支持几种松散格式：
+
+```text
+日文名：上条当麻
+假名：かみじょうとうま
+中文名：上条当麻
+
+アリス＝アナザーバイブル	爱丽丝＝另一圣经
+ネフテュス => 奈芙蒂斯
+```
+
+这条路线不走灰机 wiki API，所以不会被 Cloudflare 的自动化拦截影响。导入结果仍然是 `pending_review`，需要你最后确认。
+
 ### 5. 生成中文输出说明
 
 ```powershell

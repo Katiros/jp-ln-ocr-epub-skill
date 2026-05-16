@@ -38,6 +38,17 @@ UNCERTAIN_FIELDS = [
     "correct_reading",
     "note",
 ]
+AUTO_RUBY_FIELDS = [
+    "raw_source",
+    "cleaned_source",
+    "reading",
+    "zh",
+    "type",
+    "ruby_candidates",
+    "action",
+    "needs_review",
+    "note",
+]
 
 
 def clean(value: Any) -> str:
@@ -174,12 +185,35 @@ def write_uncertain_csv(path: Path, rows: list[dict[str, str]]) -> None:
             )
 
 
+def write_auto_ruby_csv(path: Path, rows: list[dict[str, str]]) -> None:
+    auto_rows = [row for row in rows if row["ruby_warnings"].startswith("removed embedded ruby")]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=AUTO_RUBY_FIELDS)
+        writer.writeheader()
+        for row in auto_rows:
+            writer.writerow(
+                {
+                    "raw_source": row["raw_source"],
+                    "cleaned_source": row["source"],
+                    "reading": row["reading"],
+                    "zh": row["zh"],
+                    "type": row["type"],
+                    "ruby_candidates": row["ruby_candidates"],
+                    "action": "auto_removed_from_source",
+                    "needs_review": "yes",
+                    "note": row["note"],
+                }
+            )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Import manually copied wiki terms Markdown")
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--review-md", required=True)
     parser.add_argument("--uncertain-csv", help="Rows where embedded ruby is uncertain and needs manual mapping")
+    parser.add_argument("--auto-ruby-csv", help="Rows where embedded ruby was automatically removed")
     args = parser.parse_args()
 
     text = Path(args.input).read_text(encoding="utf-8-sig", errors="ignore")
@@ -188,10 +222,14 @@ def main() -> None:
     write_review(Path(args.review_md), rows)
     if args.uncertain_csv:
         write_uncertain_csv(Path(args.uncertain_csv), rows)
+    if args.auto_ruby_csv:
+        write_auto_ruby_csv(Path(args.auto_ruby_csv), rows)
     print(f"Wrote {len(rows)} terms: {args.output}")
     print(f"Wrote review report: {args.review_md}")
     if args.uncertain_csv:
         print(f"Wrote uncertain ruby rows: {args.uncertain_csv}")
+    if args.auto_ruby_csv:
+        print(f"Wrote auto ruby rows: {args.auto_ruby_csv}")
 
 
 if __name__ == "__main__":

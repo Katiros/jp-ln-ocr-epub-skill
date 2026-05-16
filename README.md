@@ -335,7 +335,8 @@ powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
   --input G:/code/wiki_seed/术语表.MD `
   --output G:/code/wiki_seed/toaru_terms_cleaned.csv `
   --review-md G:/code/wiki_seed/toaru_terms_review.md `
-  --uncertain-csv G:/code/wiki_seed/toaru_terms_uncertain_ruby.csv
+  --uncertain-csv G:/code/wiki_seed/toaru_terms_uncertain_ruby.csv `
+  --auto-ruby-csv G:/code/wiki_seed/toaru_terms_auto_ruby_review.csv
 ```
 
 脚本会把疑似振假名混入的原文清洗出来，例如：
@@ -370,6 +371,23 @@ correct_reading: ひかり しょけい
 ```
 
 留空表示这不是振假名，保持原文。
+
+即使脚本认为可以确定并自动剥离，也会把这些条目写入：
+
+```text
+toaru_terms_auto_ruby_review.csv
+```
+
+这份表用于审计自动清洗结果，重点看：
+
+```text
+raw_source        原始 wiki 术语
+cleaned_source    自动清洗后的术语
+reading           被剥离出的读音
+needs_review      默认 yes
+```
+
+如果你发现某条自动清洗错了，就以 `raw_source` 或你手动填写的版本为准，不要把那条当作 confirmed。
 
 ### 4.7. 生成翻译用术语表
 

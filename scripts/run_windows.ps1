@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("doctor", "scan", "ocr", "clean", "detect-chapters", "merge-chapters", "import-wiki-glossary", "write-readme", "review-pack", "export-docx", "cleanup", "first-chapter-review")]
+    [ValidateSet("doctor", "scan", "ocr", "clean", "detect-chapters", "merge-chapters", "import-wiki-glossary", "draft-glossary", "write-readme", "review-pack", "export-docx", "cleanup", "first-chapter-review")]
     [string]$Step,
 
     [string]$Config = "assets\config.example.yaml",
@@ -10,7 +10,9 @@ param(
     [int]$Chapter = 1,
     [switch]$IncludeVenvPycache,
     [string]$ManualWikiCsv = "",
-    [string]$ManualWikiText = ""
+    [string]$ManualWikiText = "",
+    [string]$SeedGlossary = "",
+    [switch]$UseDeepSeekGlossaryDraft
 )
 
 $ErrorActionPreference = "Stop"
@@ -76,6 +78,20 @@ switch ($Step) {
         )
         if ($ManualWikiCsv) { $args += @("--manual-csv", $ManualWikiCsv) }
         if ($ManualWikiText) { $args += @("--manual-text", $ManualWikiText) }
+        if ($ManualWikiCsv -or $ManualWikiText) { $args += @("--offline") }
+        & $PythonExe @args
+    }
+    "draft-glossary" {
+        if (-not $OutputDir) { throw "OutputDir is required for draft-glossary." }
+        $args = @(
+            "scripts\draft_glossary.py",
+            "--candidates-csv", (Join-Path $OutputDir "05_glossary\glossary_candidates.csv"),
+            "--output", (Join-Path $OutputDir "05_glossary\glossary_draft.csv")
+        )
+        $wiki = Join-Path $OutputDir "05_glossary\wiki_glossary_candidates.csv"
+        if (Test-Path $wiki) { $args += @("--wiki-csv", $wiki) }
+        if ($SeedGlossary) { $args += @("--seed-csv", $SeedGlossary) }
+        if ($UseDeepSeekGlossaryDraft) { $args += @("--deepseek") }
         & $PythonExe @args
     }
     "write-readme" {
@@ -122,6 +138,14 @@ switch ($Step) {
         & $PythonExe "scripts\detect_chapters.py" `
             --input-dir (Join-Path $OutputDir "04_cleaned_jp") `
             --output (Join-Path $OutputDir "00_manifest\chapter_boundaries.json")
+        $draftArgs = @(
+            "scripts\draft_glossary.py",
+            "--candidates-csv", (Join-Path $OutputDir "05_glossary\glossary_candidates.csv"),
+            "--output", (Join-Path $OutputDir "05_glossary\glossary_draft.csv")
+        )
+        $wiki = Join-Path $OutputDir "05_glossary\wiki_glossary_candidates.csv"
+        if (Test-Path $wiki) { $draftArgs += @("--wiki-csv", $wiki) }
+        & $PythonExe @draftArgs
         & $PythonExe "scripts\merge_chapter_pages.py" `
             --input-dir (Join-Path $OutputDir "04_cleaned_jp") `
             --boundaries (Join-Path $OutputDir "00_manifest\chapter_boundaries.json") `

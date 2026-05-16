@@ -276,7 +276,48 @@ powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
 ネフテュス => 奈芙蒂斯
 ```
 
-这条路线不走灰机 wiki API，所以不会被 Cloudflare 的自动化拦截影响。导入结果仍然是 `pending_review`，需要你最后确认。
+这条路线会自动使用离线模式，不走灰机 wiki API，所以不会被 Cloudflare 的自动化拦截影响。导入结果仍然是 `pending_review`，需要你最后确认。
+
+### 4.6. 生成初版术语表
+
+不需要从空白表开始手填。可以让 skill 先把 OCR 候选、wiki 候选、已有术语表合并成一份初版：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
+  -Step draft-glossary `
+  -OutputDir 输出目录
+```
+
+会生成：
+
+```text
+05_glossary/glossary_draft.csv
+```
+
+如果你有以前翻译组整理过的术语表，可以作为种子表传进去：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
+  -Step draft-glossary `
+  -OutputDir 输出目录 `
+  -SeedGlossary G:/code/wiki_seed/confirmed_terms.csv
+```
+
+如果你已经配置了 `DEEPSEEK_API_KEY`，也可以让 DeepSeek 给缺译名的项目生成草案：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
+  -Step draft-glossary `
+  -OutputDir 输出目录 `
+  -UseDeepSeekGlossaryDraft
+```
+
+生成规则：
+
+- wiki/种子表匹配到的译名会优先填入。
+- 纯汉字人名/术语会先按中文汉字原样填入，标记为 `draft`。
+- 片假名、外来语、复杂专名如果没有来源，会保留为 `pending_review`；开启 DeepSeek 后会尝试补草案。
+- 自动生成的内容不会标记为 `confirmed`，需要你复核后手动确认。
 
 ### 5. 生成中文输出说明
 
@@ -356,7 +397,7 @@ powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
 这个步骤会自动执行：
 
 ```text
-scan -> OCR -> clean -> detect-chapters -> merge chapter -> export DOCX -> README_OUTPUTS -> 08_review -> cleanup
+scan -> OCR -> clean -> detect-chapters -> draft glossary -> merge chapter -> export DOCX -> README_OUTPUTS -> 08_review -> cleanup
 ```
 
 它默认只生成 OCR 审阅稿，不会调用 DeepSeek 翻译，也不会制作 EPUB。

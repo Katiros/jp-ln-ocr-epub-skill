@@ -318,6 +318,7 @@ def main() -> None:
     parser.add_argument("--seed-file", help="Plain text seed terms, one per line")
     parser.add_argument("--manual-csv", help="Manually exported wiki glossary CSV to merge without API access")
     parser.add_argument("--manual-text", help="Browser-saved/copied wiki text, Markdown, or HTML to parse without API access")
+    parser.add_argument("--offline", action="store_true", help="Only use manual CSV/text inputs; do not call the wiki API")
     parser.add_argument("--output", required=True)
     parser.add_argument("--limit", type=int, default=200)
     parser.add_argument("--per-term", type=int, default=1)
@@ -335,7 +336,9 @@ def main() -> None:
         terms = terms[: args.limit]
     if not terms and not manual_rows:
         raise SystemExit("No seed terms found. Provide --terms-csv or --seed-file.")
-    rows = manual_rows + (import_terms(args.api_url, args.page_url, terms, args.per_term, args.sleep) if terms else [])
+    rows = manual_rows
+    if terms and not args.offline:
+        rows += import_terms(args.api_url, args.page_url, terms, args.per_term, args.sleep)
     write_csv(Path(args.output), rows)
     print(f"Wrote {len(rows)} wiki glossary candidates: {args.output}")
 

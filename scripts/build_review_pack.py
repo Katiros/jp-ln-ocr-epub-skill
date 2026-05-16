@@ -110,6 +110,9 @@ def write_glossary_review(output_dir: Path, review_dir: Path) -> None:
     wiki_src = output_dir / "05_glossary" / "wiki_glossary_candidates.csv"
     wiki_dst = review_dir / "wiki_glossary_candidates.csv"
     wiki_copied = copy_if_exists(wiki_src, wiki_dst)
+    draft_src = output_dir / "05_glossary" / "glossary_draft.csv"
+    draft_dst = review_dir / "glossary_draft.csv"
+    draft_copied = copy_if_exists(draft_src, draft_dst)
     lines = ["# 术语表复核", ""]
     if not copied:
         lines.append("- 未找到 `05_glossary/glossary_candidates.csv`。")
@@ -125,6 +128,9 @@ def write_glossary_review(output_dir: Path, review_dir: Path) -> None:
     if wiki_copied:
         lines.append("- 已复制 wiki 预填充术语候选：`wiki_glossary_candidates.csv`。")
         lines.append("- wiki 候选仍需人工确认，不会直接覆盖最终术语表。")
+    if draft_copied:
+        lines.append("- 已生成初版术语表：`glossary_draft.csv`。")
+        lines.append("- 请优先复核这一份：修改 `zh`，把确认项的 `status` 改为 `confirmed`。")
     (review_dir / "glossary_review.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -146,6 +152,7 @@ def write_readme(output_dir: Path, review_dir: Path) -> None:
         ("cleanup_warnings.md", "疑似 ruby 混入、异常 OCR 行等清洗警告。"),
         ("glossary_candidates.csv", "自动抽取的人名/术语候选，需要人工确认。"),
         ("wiki_glossary_candidates.csv", "从 wiki 预填充的人名/术语候选，需要人工确认。"),
+        ("glossary_draft.csv", "已自动填入译名草案的初版术语表，优先复核这份。"),
         ("glossary_review.md", "术语表复核说明。"),
         ("chapter_boundaries_review.md", "章节边界检测结果的中文摘要。"),
         ("docx_review_index.md", "Word 审阅文件索引。"),
@@ -161,8 +168,9 @@ def write_readme(output_dir: Path, review_dir: Path) -> None:
         "1. 打开 `low_confidence_pages.md`，先看低置信度和异常页面。",
         "2. 打开 `cleanup_warnings.md`，检查疑似 ruby 混入和异常 OCR 行。",
         "3. 打开 `chapter_boundaries_review.md`，确认章节边界是否正确。",
-        "4. 打开 `glossary_candidates.csv`，确认术语、人名和固定译名。",
-        "5. 打开 `docx_review_index.md`，进入 Word 文件校对 OCR 或译文。",
+        "4. 如果存在 `glossary_draft.csv`，优先复核这份初版术语表。",
+        "5. 如需追溯来源，再打开 `glossary_candidates.csv` 和 `wiki_glossary_candidates.csv`。",
+        "6. 打开 `docx_review_index.md`，进入 Word 文件校对 OCR 或译文。",
         "",
         "## 文件说明",
         "",

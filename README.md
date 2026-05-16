@@ -409,13 +409,30 @@ needs_review      默认 yes
 
 其中 `--auto-special-lines` 填的是 `toaru_terms_auto_ruby_review.csv` 里你确认应改为 `special` 的行号。
 
-如果要直接从这份人工复核后的 final 表生成 DeepSeek 翻译用术语表：
+如果你审完 `toaru_terms_possible_special.csv`，用下面的脚本把“中文夹英文、疑似 special ruby”的复核结果回写到一份新表。它不会覆盖原来的 `toaru_terms_final.csv`：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\apply_possible_special.py `
+  --base G:/code/wiki_seed/toaru_terms_final.csv `
+  --possible-special G:/code/wiki_seed/toaru_terms_possible_special.csv `
+  --output G:/code/wiki_seed/toaru_terms_final.special.csv `
+  --applied-report G:/code/wiki_seed/toaru_terms_possible_special_applied.csv
+```
+
+回写规则：
+
+- 如果有 `review/decision/apply/use/confirm/确认/处理/是否回写` 这类列，填 `yes/apply/special/ok/是/应用` 会强制回写，填 `no/skip/ignore/否/跳过` 会跳过。
+- 如果没有明确标记，`confidence=high` 和 `confidence=medium` 都默认回写；不想回写的行请填 `no/skip/ignore/否/跳过`。
+- 回写时会使用你改过的 `suggested_source`、`suggested_reading`、`suggested_rich_source`、`suggested_rich_zh`。
+- `toaru_terms_possible_special_applied.csv` 是本次真正回写的清单，方便你二次检查。
+
+如果要从复核后的 final 表生成 DeepSeek 翻译用术语表：
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\build_translation_glossary.py `
-  --input G:/code/wiki_seed/toaru_terms_final.csv `
-  --output G:/code/wiki_seed/toaru_terms_for_translation.txt `
-  --rejected-csv G:/code/wiki_seed/toaru_terms_for_translation_rejected.csv `
+  --input G:/code/wiki_seed/toaru_terms_final.special.csv `
+  --output G:/code/wiki_seed/toaru_terms_for_translation.special.txt `
+  --rejected-csv G:/code/wiki_seed/toaru_terms_for_translation.special_rejected.csv `
   --allow-reviewed-draft
 ```
 

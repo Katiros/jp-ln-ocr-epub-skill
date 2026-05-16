@@ -319,6 +319,58 @@ powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
 - 片假名、外来语、复杂专名如果没有来源，会保留为 `pending_review`；开启 DeepSeek 后会尝试补草案。
 - 自动生成的内容不会标记为 `confirmed`，需要你复核后手动确认。
 
+如果你从 wiki 手动复制的是这种 Markdown 结构：
+
+```text
+初出：...
+原文：上条かみじょう当麻とうま
+译文：上条当麻
+类型：人名
+```
+
+可以先整理成 CSV：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\import_manual_terms_md.py `
+  --input G:/code/wiki_seed/术语表.MD `
+  --output G:/code/wiki_seed/toaru_terms_cleaned.csv `
+  --review-md G:/code/wiki_seed/toaru_terms_review.md `
+  --uncertain-csv G:/code/wiki_seed/toaru_terms_uncertain_ruby.csv
+```
+
+脚本会把疑似振假名混入的原文清洗出来，例如：
+
+```text
+Sプロセッサ社脳神経応用分析ぶんせき所
+-> Sプロセッサ社脳神経応用分析所
+reading: ぶんせき
+```
+
+`使い魔` 这种一个假名夹在汉字中的普通词形会保留，不会自动删除。
+
+如果脚本无法判断某段平假名是不是振假名，会保留原文，并把这一行写入：
+
+```text
+toaru_terms_uncertain_ruby.csv
+```
+
+你只需要在这份表里手动填：
+
+```text
+correct_source     清洗后的正确原文
+correct_reading    被剥离出来的读音
+```
+
+例如：
+
+```text
+raw_source: 光ひかりの処刑しょけい
+correct_source: 光の処刑
+correct_reading: ひかり しょけい
+```
+
+留空表示这不是振假名，保持原文。
+
 ### 4.7. 生成翻译用术语表
 
 正式翻译不要直接使用 `glossary_candidates.csv` 或整份 `glossary_draft.csv`。先生成过滤后的翻译用术语表：

@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("doctor", "scan", "ocr", "clean", "detect-chapters", "merge-chapters", "import-wiki-glossary", "draft-glossary", "build-translation-glossary", "write-readme", "review-pack", "export-docx", "cleanup", "first-chapter-review")]
+    [ValidateSet("doctor", "scan", "ocr", "clean", "detect-chapters", "merge-chapters", "import-wiki-glossary", "draft-glossary", "build-translation-glossary", "write-readme", "review-pack", "agent-checklist", "export-docx", "cleanup", "first-chapter-review")]
     [string]$Step,
 
     [string]$Config = "assets\config.example.yaml",
@@ -109,6 +109,10 @@ switch ($Step) {
         if (-not $OutputDir) { throw "OutputDir is required for review-pack." }
         & $PythonExe "scripts\build_review_pack.py" --output-dir $OutputDir
     }
+    "agent-checklist" {
+        if (-not $OutputDir) { throw "OutputDir is required for agent-checklist." }
+        & $PythonExe "scripts\write_agent_checklist.py" --output-dir $OutputDir
+    }
     "export-docx" {
         if (-not $OutputDir) { throw "OutputDir is required for export-docx." }
         $prefix = "ch{0:D3}" -f $Chapter
@@ -170,6 +174,7 @@ switch ($Step) {
             --prefix $prefix
         & $PythonExe "scripts\write_output_readme.py" --output-dir $OutputDir
         & $PythonExe "scripts\build_review_pack.py" --output-dir $OutputDir
+        & $PythonExe "scripts\write_agent_checklist.py" --output-dir $OutputDir
         & $PythonExe "scripts\cleanup_runtime.py" --output-dir $OutputDir --runtime
     }
 }

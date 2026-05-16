@@ -184,6 +184,14 @@ Do not rush from OCR to translation or from translation to EPUB. Use explicit re
      ```
    - Only use `-IncludeVenvPycache` for a deep cleanup when startup speed is less important than disk cleanup.
 
+14. **Agent self-check**
+   - Before ending a run, generate an agent checklist:
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File scripts/run_windows.ps1 -Step agent-checklist -OutputDir <output_dir>
+     ```
+   - Do not claim review artifacts exist unless `AGENT_CHECKLIST.md` marks the review files as OK.
+   - If review files are missing, run `review-pack` and then regenerate `agent-checklist`.
+
 ## Output Layout
 
 Use this layout unless the user asks otherwise:
@@ -212,6 +220,8 @@ output/
     glossary_candidates.csv
     chapter_boundaries_review.md
     docx_review_index.md
+  AGENT_CHECKLIST.md
+  AGENT_CHECKLIST.json
   logs/
     quality_report.md
     errors.json

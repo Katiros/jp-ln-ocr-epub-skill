@@ -598,6 +598,25 @@ powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
 
 这会释放一些空间，但下次启动 Python 包时可能会稍慢。
 
+### 10. Agent 自审查清单
+
+如果用 OpenClaw/Codex 跑流程，结束前让它生成自审查清单：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
+  -Step agent-checklist `
+  -OutputDir 输出目录
+```
+
+会生成：
+
+```text
+AGENT_CHECKLIST.md
+AGENT_CHECKLIST.json
+```
+
+它会检查 `08_review/README_REVIEW.md`、`README_OUTPUTS.md`、`quality_report.md`、`glossary_for_translation.txt`、Word 审阅文件等是否存在或为空。OpenClaw 结束任务前应该先看这份清单，不能在 review 文件缺失时声称已经完成。
+
 ## 输出目录怎么看
 
 默认会按阶段放文件：

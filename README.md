@@ -396,6 +396,31 @@ needs_review      默认 yes
 
 如果你发现某条自动清洗错了，就以 `raw_source` 或你手动填写的版本为准，不要把那条当作 confirmed。
 
+审完之后，用下面的脚本把复核结果合并成最终术语表：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\apply_glossary_review.py `
+  --cleaned G:/code/wiki_seed/toaru_terms_cleaned.csv `
+  --uncertain-csv G:/code/wiki_seed/toaru_terms_uncertain_ruby.csv `
+  --auto-ruby-csv G:/code/wiki_seed/toaru_terms_auto_ruby_review.csv `
+  --auto-special-lines 79,80,138 `
+  --output G:/code/wiki_seed/toaru_terms_final.csv
+```
+
+其中 `--auto-special-lines` 填的是 `toaru_terms_auto_ruby_review.csv` 里你确认应改为 `special` 的行号。
+
+如果要直接从这份人工复核后的 final 表生成 DeepSeek 翻译用术语表：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\build_translation_glossary.py `
+  --input G:/code/wiki_seed/toaru_terms_final.csv `
+  --output G:/code/wiki_seed/toaru_terms_for_translation.txt `
+  --rejected-csv G:/code/wiki_seed/toaru_terms_for_translation_rejected.csv `
+  --allow-reviewed-draft
+```
+
+`ruby_mode=special` 且带 `rich_source/rich_zh` 的条目会以 ruby HTML 形式进入翻译用术语表。
+
 整理后的主表 `toaru_terms_cleaned.csv` 也会包含：
 
 ```text

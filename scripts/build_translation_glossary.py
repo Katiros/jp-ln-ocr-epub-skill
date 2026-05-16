@@ -52,6 +52,7 @@ def should_include(
     min_confidence: str,
     max_source_length: int,
     boundary_terms: tuple[str, ...],
+    allow_reviewed_draft: bool,
 ) -> tuple[bool, str]:
     source = clean(row.get("source"))
     zh = clean(row.get("zh"))
@@ -82,6 +83,8 @@ def should_include(
 
     if status == "confirmed":
         return True, "confirmed"
+    if allow_reviewed_draft and status == "draft" and row.get("zh"):
+        return True, "reviewed draft allowed"
 
     order = {"low": 0, "medium": 1, "high": 2, "confirmed": 3}
     required = order.get(min_confidence, 1)
@@ -122,8 +125,13 @@ def write_translation_glossary(path: Path, rows: list[dict[str, str]]) -> None:
         source = clean(row.get("source"))
         zh = clean(row.get("zh"))
         reading = clean(row.get("reading"))
-        suffix = f" ({reading})" if reading else ""
-        lines.append(f"{source}{suffix} → {zh}")
+        rich_source = clean(row.get("rich_source"))
+        rich_zh = clean(row.get("rich_zh"))
+        if row.get("ruby_mode") == "special" and rich_source and rich_zh:
+            lines.append(f"{rich_source} → {rich_zh}")
+        else:
+            suffix = f" ({reading})" if reading else ""
+            lines.append(f"{source}{suffix} → {zh}")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
@@ -143,6 +151,7 @@ def main() -> None:
     parser.add_argument("--rejected-csv", help="Optional CSV explaining skipped rows")
     parser.add_argument("--min-confidence", choices=["low", "medium", "high"], default="medium")
     parser.add_argument("--max-source-length", type=int, default=28)
+    parser.add_argument("--allow-reviewed-draft", action="store_true", help="Allow draft rows from a manually reviewed seed glossary")
     parser.add_argument(
         "--boundary-terms",
         default=",".join(DEFAULT_BOUNDARY_TERMS),
@@ -154,7 +163,13 @@ def main() -> None:
     rejected: list[dict[str, str]] = []
     for row in read_csv(Path(args.input)):
         boundary_terms = tuple(term.strip() for term in args.boundary_terms.split(",") if term.strip())
-        include, reason = should_include(row, args.min_confidence, args.max_source_length, boundary_terms)
+        include, reason = should_include(
+            row,
+            args.min_confidence,
+            args.max_source_length,
+            boundary_terms,
+            args.allow_reviewed_draft,
+        )
         row["reason"] = reason
         if include:
             accepted.append(row)

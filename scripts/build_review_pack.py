@@ -113,6 +113,12 @@ def write_glossary_review(output_dir: Path, review_dir: Path) -> None:
     draft_src = output_dir / "05_glossary" / "glossary_draft.csv"
     draft_dst = review_dir / "glossary_draft.csv"
     draft_copied = copy_if_exists(draft_src, draft_dst)
+    translation_src = output_dir / "05_glossary" / "glossary_for_translation.txt"
+    translation_dst = review_dir / "glossary_for_translation.txt"
+    translation_copied = copy_if_exists(translation_src, translation_dst)
+    rejected_src = output_dir / "05_glossary" / "glossary_for_translation_rejected.csv"
+    rejected_dst = review_dir / "glossary_for_translation_rejected.csv"
+    rejected_copied = copy_if_exists(rejected_src, rejected_dst)
     lines = ["# 术语表复核", ""]
     if not copied:
         lines.append("- 未找到 `05_glossary/glossary_candidates.csv`。")
@@ -131,6 +137,11 @@ def write_glossary_review(output_dir: Path, review_dir: Path) -> None:
     if draft_copied:
         lines.append("- 已生成初版术语表：`glossary_draft.csv`。")
         lines.append("- 请优先复核这一份：修改 `zh`，把确认项的 `status` 改为 `confirmed`。")
+    if translation_copied:
+        lines.append("- 已生成翻译用术语表：`glossary_for_translation.txt`。")
+        lines.append("- DeepSeek 翻译时请优先使用这份过滤后的术语表。")
+    if rejected_copied:
+        lines.append("- 已生成过滤明细：`glossary_for_translation_rejected.csv`，可查看哪些碎片没有进入翻译。")
     (review_dir / "glossary_review.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -153,6 +164,8 @@ def write_readme(output_dir: Path, review_dir: Path) -> None:
         ("glossary_candidates.csv", "自动抽取的人名/术语候选，需要人工确认。"),
         ("wiki_glossary_candidates.csv", "从 wiki 预填充的人名/术语候选，需要人工确认。"),
         ("glossary_draft.csv", "已自动填入译名草案的初版术语表，优先复核这份。"),
+        ("glossary_for_translation.txt", "过滤后的翻译用术语表，给 DeepSeek prompt 使用。"),
+        ("glossary_for_translation_rejected.csv", "未进入翻译术语表的条目与原因。"),
         ("glossary_review.md", "术语表复核说明。"),
         ("chapter_boundaries_review.md", "章节边界检测结果的中文摘要。"),
         ("docx_review_index.md", "Word 审阅文件索引。"),

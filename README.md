@@ -319,6 +319,50 @@ powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
 - 片假名、外来语、复杂专名如果没有来源，会保留为 `pending_review`；开启 DeepSeek 后会尝试补草案。
 - 自动生成的内容不会标记为 `confirmed`，需要你复核后手动确认。
 
+### 4.7. 生成翻译用术语表
+
+正式翻译不要直接使用 `glossary_candidates.csv` 或整份 `glossary_draft.csv`。先生成过滤后的翻译用术语表：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
+  -Step build-translation-glossary `
+  -OutputDir 输出目录
+```
+
+会生成：
+
+```text
+05_glossary/glossary_for_translation.txt
+05_glossary/glossary_for_translation_rejected.csv
+```
+
+默认规则：
+
+- `confirmed` 一定进入翻译用术语表。
+- `draft` 只有中高置信度才进入。
+- `pending_review`、`remove`、`rejected` 不进入。
+- 疑似 OCR 碎片、过短、过长、含空白或边界标点的条目不进入。
+- 默认排除超过 28 个字符的 source，减少多个词粘在一起的 OCR 长串进入 prompt。
+- 默认会检查 `アリス`、`アンナ`、`コロンゾン`、`上条` 这类常见独立专名是否被粘到前一个词后面；疑似粘连的条目不进入。
+
+`glossary_for_translation.txt` 的格式是：
+
+```text
+一方通行 → 一方通行
+アリス＝アナザーバイブル → 爱丽丝＝异典
+```
+
+DeepSeek 会把它当译名参考，不是字符串替换。翻译 prompt 会提醒模型：如果某条术语明显不是当前上下文里的独立词，就忽略。
+
+翻译时优先把这份文件传给 `--glossary`：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\deepseek_translate.py `
+  --input 输出目录\04_cleaned_jp\chapter_01.jp.md `
+  --output 输出目录\06_translated_zh\chapter_01.zh.md `
+  --glossary 输出目录\05_glossary\glossary_for_translation.txt
+```
+
 ### 5. 生成中文输出说明
 
 ```powershell
@@ -397,7 +441,7 @@ powershell -ExecutionPolicy Bypass -File scripts\run_windows.ps1 `
 这个步骤会自动执行：
 
 ```text
-scan -> OCR -> clean -> detect-chapters -> draft glossary -> merge chapter -> export DOCX -> README_OUTPUTS -> 08_review -> cleanup
+scan -> OCR -> clean -> detect-chapters -> draft glossary -> translation glossary -> merge chapter -> export DOCX -> README_OUTPUTS -> 08_review -> cleanup
 ```
 
 它默认只生成 OCR 审阅稿，不会调用 DeepSeek 翻译，也不会制作 EPUB。

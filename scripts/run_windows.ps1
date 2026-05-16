@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("doctor", "scan", "ocr", "clean", "detect-chapters", "merge-chapters", "import-wiki-glossary", "draft-glossary", "write-readme", "review-pack", "export-docx", "cleanup", "first-chapter-review")]
+    [ValidateSet("doctor", "scan", "ocr", "clean", "detect-chapters", "merge-chapters", "import-wiki-glossary", "draft-glossary", "build-translation-glossary", "write-readme", "review-pack", "export-docx", "cleanup", "first-chapter-review")]
     [string]$Step,
 
     [string]$Config = "assets\config.example.yaml",
@@ -94,6 +94,13 @@ switch ($Step) {
         if ($UseDeepSeekGlossaryDraft) { $args += @("--deepseek") }
         & $PythonExe @args
     }
+    "build-translation-glossary" {
+        if (-not $OutputDir) { throw "OutputDir is required for build-translation-glossary." }
+        & $PythonExe "scripts\build_translation_glossary.py" `
+            --input (Join-Path $OutputDir "05_glossary\glossary_draft.csv") `
+            --output (Join-Path $OutputDir "05_glossary\glossary_for_translation.txt") `
+            --rejected-csv (Join-Path $OutputDir "05_glossary\glossary_for_translation_rejected.csv")
+    }
     "write-readme" {
         if (-not $OutputDir) { throw "OutputDir is required for write-readme." }
         & $PythonExe "scripts\write_output_readme.py" --output-dir $OutputDir
@@ -146,6 +153,10 @@ switch ($Step) {
         $wiki = Join-Path $OutputDir "05_glossary\wiki_glossary_candidates.csv"
         if (Test-Path $wiki) { $draftArgs += @("--wiki-csv", $wiki) }
         & $PythonExe @draftArgs
+        & $PythonExe "scripts\build_translation_glossary.py" `
+            --input (Join-Path $OutputDir "05_glossary\glossary_draft.csv") `
+            --output (Join-Path $OutputDir "05_glossary\glossary_for_translation.txt") `
+            --rejected-csv (Join-Path $OutputDir "05_glossary\glossary_for_translation_rejected.csv")
         & $PythonExe "scripts\merge_chapter_pages.py" `
             --input-dir (Join-Path $OutputDir "04_cleaned_jp") `
             --boundaries (Join-Path $OutputDir "00_manifest\chapter_boundaries.json") `

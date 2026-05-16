@@ -178,9 +178,13 @@ epub:
 
 ```text
 02_ocr_raw/      OCR 紧凑 JSON
-03_ordered_jp/   竖排排序后的每页日文
+02_ocr_raw/ruby_candidates/  每页被剥离的振假名候选
+03_ordered_jp/   剥离疑似振假名后、竖排排序后的每页日文
 logs/quality_report.md
+logs/ruby_candidates.csv
 ```
+
+默认会把“小字号、纯假名、贴近正文列”的 OCR 框从正文流里剥离，避免振假名进入后续翻译。被剥离的内容不会丢失，会写入 `logs/ruby_candidates.csv` 和 `02_ocr_raw/ruby_candidates/` 供复核。如果你需要保留原始振假名进入 `03_ordered_jp/`，运行 OCR 时加 `--keep-ruby-candidates`。
 
 ### 3. 清洗 OCR 并抽取术语候选
 
@@ -200,7 +204,10 @@ logs/quality_report.md
 04_cleaned_jp/                         清洗后的日文
 05_glossary/glossary_candidates.csv     术语候选
 logs/cleanup_warnings.md                疑似 ruby 混入/异常行警告
+logs/ruby_inline_review.csv             clean 阶段从正文内剥离的振假名记录
 ```
+
+clean 阶段还会做一层保守兜底：遇到 `上かみ条じょう当とう麻ま` 这类“假名夹在汉字之间”的 OCR 结果，会把假名剥离成 `上条当麻`，并把原文、清洗后文本、剥离内容写入 `logs/ruby_inline_review.csv`。这份文件是复核用的；翻译默认使用清洗后的正文。
 
 ### 4. 检测章节边界
 
@@ -708,7 +715,7 @@ assets/config.example.yaml
 
 仍需继续完善：
 
-- ruby / 振假名精准剥离
+- ruby / 振假名已做几何剥离与文本兜底，但仍建议在 `ruby_candidates.csv` 和 `ruby_inline_review.csv` 中抽查
 - 复杂人物介绍页、彩页说明页分类
 - 更自然的段落合并
 - EPUB 自动制作

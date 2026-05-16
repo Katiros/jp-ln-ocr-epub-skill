@@ -56,6 +56,8 @@ layout:
   preserve_section_marker: true
   detect_ruby: true
   ruby_mode: extract
+  strip_ruby_candidates: true
+  ruby_width_ratio: 0.72
   min_main_text_size_ratio: 1.0
   ruby_size_ratio: 0.65
 

@@ -9,8 +9,10 @@ a quality report. It intentionally stops before translation.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
+import re
 import statistics
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +21,7 @@ from typing import Any
 from env_bootstrap import configure_skill_local_env
 
 SKIP_KINDS_DEFAULT = {"cover", "illustration", "blank"}
+KANA_ONLY = re.compile(r"^[ぁ-ゖァ-ヴーー]+$")
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -148,9 +151,39 @@ class OCRLine:
         _, y1, _, y2 = box_bounds(self.points)
         return (y1 + y2) / 2
 
+    @property
+    def width(self) -> float:
+        x1, _, x2, _ = box_bounds(self.points)
+        return max(0.0, x2 - x1)
+
+    @property
+    def height(self) -> float:
+        _, y1, _, y2 = box_bounds(self.points)
+        return max(0.0, y2 - y1)
+
+    @property
+    def bounds(self) -> tuple[float, float, float, float]:
+        return box_bounds(self.points)
+
 
 def extract_lines(raw: Any) -> list[OCRLine]:
     data = jsonable(raw)
+    if isinstance(data, dict) and isinstance(data.get("lines"), list):
+        compact_lines: list[OCRLine] = []
+        for item in data["lines"]:
+            if not isinstance(item, dict):
+                continue
+            text = item.get("text")
+            if text is None:
+                continue
+            score = None
+            try:
+                if item.get("score") is not None:
+                    score = float(item.get("score"))
+            except Exception:
+                score = None
+            compact_lines.append(OCRLine(text=str(text), score=score, points=normalize_box(item.get("points"))))
+        return compact_lines
     texts = find_key(data, "rec_texts") or find_key(data, "texts") or []
     scores = find_key(data, "rec_scores") or find_key(data, "scores") or []
     boxes = (
@@ -200,6 +233,103 @@ def order_vertical_rl(lines: list[OCRLine], column_threshold: float | None = Non
     return ordered
 
 
+def is_kana_only_text(text: str) -> bool:
+    text = text.strip()
+    return bool(text) and bool(KANA_ONLY.fullmatch(text))
+
+
+def y_overlap(a: OCRLine, b: OCRLine) -> float:
+    _, ay1, _, ay2 = a.bounds
+    _, by1, _, by2 = b.bounds
+    return max(0.0, min(ay2, by2) - max(ay1, by1))
+
+
+def nearest_main_line(candidate: OCRLine, main_lines: list[OCRLine], max_x_distance: float) -> OCRLine | None:
+    nearby: list[tuple[float, OCRLine]] = []
+    for main in main_lines:
+        if abs(candidate.cx - main.cx) > max_x_distance:
+            continue
+        if y_overlap(candidate, main) <= 0 and not (main.bounds[1] <= candidate.cy <= main.bounds[3]):
+            continue
+        nearby.append((abs(candidate.cx - main.cx), main))
+    if not nearby:
+        return None
+    return min(nearby, key=lambda item: item[0])[1]
+
+
+def split_ruby_candidates(
+    lines: list[OCRLine],
+    width_ratio: float = 0.72,
+    max_chars: int = 16,
+) -> tuple[list[OCRLine], list[dict[str, Any]]]:
+    """Separate likely furigana from main vertical text using OCR box geometry.
+
+    Standard vertical LN body columns are about one full glyph wide. Ruby boxes
+    are usually kana-only and roughly half that width, positioned next to a
+    wider body column with overlapping Y range. We strip those from the text
+    stream and keep a review record.
+    """
+
+    boxed = [line for line in lines if line.points and line.text.strip()]
+    if not boxed:
+        return lines, []
+
+    main_widths = [
+        line.width
+        for line in boxed
+        if line.width >= 20 or not is_kana_only_text(line.text)
+    ]
+    if not main_widths:
+        main_widths = [line.width for line in boxed if line.width > 0]
+    if not main_widths:
+        return lines, []
+
+    main_width = statistics.median(main_widths)
+    ruby_width = max(8.0, main_width * width_ratio)
+    likely_main = [
+        line
+        for line in boxed
+        if line.width >= main_width * 0.82 or not is_kana_only_text(line.text)
+    ]
+    max_x_distance = max(24.0, main_width * 1.45)
+
+    ruby_ids: set[int] = set()
+    ruby_rows: list[dict[str, Any]] = []
+    for line in boxed:
+        text = line.text.strip()
+        if not is_kana_only_text(text):
+            continue
+        if len(text) > max_chars:
+            continue
+        if line.width > ruby_width:
+            continue
+        if line.height > 320:
+            continue
+        base = nearest_main_line(line, likely_main, max_x_distance)
+        if base is None:
+            continue
+        x1, y1, x2, y2 = line.bounds
+        ruby_ids.add(id(line))
+        ruby_rows.append(
+            {
+                "text": text,
+                "score": "" if line.score is None else round(line.score, 4),
+                "x1": round(x1, 2),
+                "y1": round(y1, 2),
+                "x2": round(x2, 2),
+                "y2": round(y2, 2),
+                "width": round(line.width, 2),
+                "height": round(line.height, 2),
+                "near_text": base.text.strip(),
+                "near_x_distance": round(abs(line.cx - base.cx), 2),
+                "reason": f"kana-only narrow box <= {ruby_width:.1f}px near body column",
+            }
+        )
+
+    main_lines = [line for line in lines if id(line) not in ruby_ids]
+    return main_lines, ruby_rows
+
+
 def clean_ordered_text(lines: list[OCRLine]) -> str:
     chunks = []
     for line in lines:
@@ -220,6 +350,40 @@ def compact_raw_result(lines: list[OCRLine]) -> dict[str, Any]:
             for line in lines
         ]
     }
+
+
+def write_ruby_page_report(path: Path, page: dict[str, Any], rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        return
+    payload = {
+        "page_index": page.get("index"),
+        "file": page.get("file"),
+        "ruby_candidates": rows,
+    }
+    write_json(path, payload)
+
+
+def write_ruby_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fields = [
+        "page",
+        "file",
+        "text",
+        "score",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "width",
+        "height",
+        "near_x_distance",
+        "near_text",
+        "reason",
+    ]
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows({field: row.get(field, "") for field in fields} for row in rows)
 
 
 def image_area(page: dict[str, Any]) -> float | None:
@@ -334,17 +498,23 @@ def cmd_ocr(args: argparse.Namespace) -> None:
     lang = args.lang or ocr_cfg.get("lang", "japan")
     confidence_threshold = float(args.confidence_threshold or ocr_cfg.get("confidence_threshold", 0.82))
     use_orientation = bool(ocr_cfg.get("detect_orientation", True))
+    layout_cfg = config.get("layout", {})
+    strip_ruby = bool(layout_cfg.get("strip_ruby_candidates", True))
+    ruby_width_ratio = float(layout_cfg.get("ruby_width_ratio", 0.72))
     overwrite = bool(args.overwrite)
     start_page = args.start_page
     end_page = args.end_page
 
     raw_dir = output_dir / "02_ocr_raw"
     ordered_dir = output_dir / "03_ordered_jp"
+    ruby_dir = raw_dir / "ruby_candidates"
     raw_dir.mkdir(parents=True, exist_ok=True)
     ordered_dir.mkdir(parents=True, exist_ok=True)
+    ruby_dir.mkdir(parents=True, exist_ok=True)
 
     ocr = make_ocr(device=device, lang=lang, use_orientation=use_orientation)
     errors: list[dict[str, Any]] = []
+    all_ruby_rows: list[dict[str, Any]] = []
 
     for page in manifest["pages"]:
         index = int(page["index"])
@@ -368,7 +538,16 @@ def cmd_ocr(args: argparse.Namespace) -> None:
             raw_json = jsonable(raw)
             lines = extract_lines(raw_json)
             write_json(raw_path, compact_raw_result(lines))
-            ordered = order_vertical_rl(lines)
+            text_lines = lines
+            ruby_rows: list[dict[str, Any]] = []
+            if strip_ruby and not args.keep_ruby_candidates:
+                text_lines, ruby_rows = split_ruby_candidates(lines, ruby_width_ratio)
+                for row in ruby_rows:
+                    row["page"] = f"{index:04d}"
+                    row["file"] = page.get("file", "")
+                write_ruby_page_report(ruby_dir / f"{stem}.json", page, ruby_rows)
+                all_ruby_rows.extend(ruby_rows)
+            ordered = order_vertical_rl(text_lines)
             txt_path.write_text(clean_ordered_text(ordered), encoding="utf-8")
 
             scores = [line.score for line in lines if line.score is not None and not math.isnan(line.score)]
@@ -376,8 +555,8 @@ def cmd_ocr(args: argparse.Namespace) -> None:
             area = image_area(page)
             density = None
             if area:
-                density = round(sum(box_area(line.points) for line in lines) / area, 6)
-            new_kind, reason = classify_after_ocr(page, lines, density)
+                density = round(sum(box_area(line.points) for line in text_lines) / area, 6)
+            new_kind, reason = classify_after_ocr(page, text_lines, density)
             page.update(
                 {
                     "kind": new_kind,
@@ -385,8 +564,10 @@ def cmd_ocr(args: argparse.Namespace) -> None:
                     "ocr_status": "done",
                     "ocr_raw": str(raw_path),
                     "ordered_jp": str(txt_path),
-                    "box_count": len(lines),
-                    "char_count": sum(len(line.text.strip()) for line in lines),
+                    "box_count": len(text_lines),
+                    "raw_box_count": len(lines),
+                    "ruby_candidate_count": len(ruby_rows),
+                    "char_count": sum(len(line.text.strip()) for line in text_lines),
                     "mean_confidence": mean_conf,
                     "text_density": density,
                 }
@@ -401,6 +582,7 @@ def cmd_ocr(args: argparse.Namespace) -> None:
     manifest["review_stage"] = "ocr_ready_for_review"
     write_json(manifest_path, manifest)
     write_quality_report(output_dir, manifest, confidence_threshold)
+    write_ruby_csv(output_dir / "logs" / "ruby_candidates.csv", all_ruby_rows)
     if errors:
         write_json(output_dir / "logs" / "errors.json", errors)
 
@@ -416,6 +598,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--start-page", type=int)
     parser.add_argument("--end-page", type=int)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--keep-ruby-candidates", action="store_true", help="Keep likely furigana in ordered text")
     return parser
 
 

@@ -17,6 +17,9 @@ FIELDS = [
     "source",
     "reading",
     "zh",
+    "ruby_mode",
+    "rich_source",
+    "rich_zh",
     "type",
     "status",
     "note",
@@ -36,6 +39,9 @@ UNCERTAIN_FIELDS = [
     "suggested_action",
     "correct_source",
     "correct_reading",
+    "correct_ruby_mode",
+    "correct_rich_source",
+    "correct_rich_zh",
     "note",
 ]
 AUTO_RUBY_FIELDS = [
@@ -43,6 +49,9 @@ AUTO_RUBY_FIELDS = [
     "cleaned_source",
     "reading",
     "zh",
+    "ruby_mode",
+    "rich_source",
+    "rich_zh",
     "type",
     "ruby_candidates",
     "action",
@@ -53,6 +62,22 @@ AUTO_RUBY_FIELDS = [
 
 def clean(value: Any) -> str:
     return str(value or "").strip()
+
+
+def ruby_html(base: str, reading: str) -> str:
+    base = clean(base)
+    reading = clean(reading)
+    if not base or not reading:
+        return ""
+    return f"<ruby>{base}<rt>{reading}</rt></ruby>"
+
+
+def infer_ruby_mode(reading: str, warnings: str) -> str:
+    if warnings.startswith("possible ruby present"):
+        return "uncertain"
+    if reading:
+        return "normal"
+    return "none"
 
 
 def split_entries(text: str) -> list[dict[str, str]]:
@@ -113,6 +138,7 @@ def convert_entry(entry: dict[str, str]) -> dict[str, str]:
     raw_source = clean(entry.get("原文"))
     entry_type = clean(entry.get("类型")) or "manual_wiki_term"
     source, reading, ruby_candidates, warnings = strip_embedded_ruby(raw_source, entry_type)
+    ruby_mode = infer_ruby_mode(reading, warnings)
     note_parts = []
     if clean(entry.get("备注")):
         note_parts.append(clean(entry.get("备注")))
@@ -122,6 +148,9 @@ def convert_entry(entry: dict[str, str]) -> dict[str, str]:
         "source": source,
         "reading": reading,
         "zh": clean(entry.get("译文")),
+        "ruby_mode": ruby_mode,
+        "rich_source": ruby_html(source, reading) if ruby_mode == "normal" else "",
+        "rich_zh": "",
         "type": entry_type,
         "status": "draft",
         "note": " | ".join(note_parts),
@@ -180,6 +209,9 @@ def write_uncertain_csv(path: Path, rows: list[dict[str, str]]) -> None:
                     "suggested_action": "如果是假名注音，请填写 correct_source/correct_reading；否则留空。",
                     "correct_source": "",
                     "correct_reading": "",
+                    "correct_ruby_mode": "",
+                    "correct_rich_source": "",
+                    "correct_rich_zh": "",
                     "note": row["note"],
                 }
             )
@@ -198,6 +230,9 @@ def write_auto_ruby_csv(path: Path, rows: list[dict[str, str]]) -> None:
                     "cleaned_source": row["source"],
                     "reading": row["reading"],
                     "zh": row["zh"],
+                    "ruby_mode": row["ruby_mode"],
+                    "rich_source": row["rich_source"],
+                    "rich_zh": row["rich_zh"],
                     "type": row["type"],
                     "ruby_candidates": row["ruby_candidates"],
                     "action": "auto_removed_from_source",

@@ -360,6 +360,9 @@ toaru_terms_uncertain_ruby.csv
 ```text
 correct_source     清洗后的正确原文
 correct_reading    被剥离出来的读音
+correct_ruby_mode  normal / special / none / uncertain
+correct_rich_source 需要保留 ruby 时填写，例如 <ruby>妨げる者<rt>サタン</rt></ruby>
+correct_rich_zh     中文 ruby，例如 <ruby>妨碍者<rt>撒旦</rt></ruby>
 ```
 
 例如：
@@ -368,6 +371,7 @@ correct_reading    被剥离出来的读音
 raw_source: 光ひかりの処刑しょけい
 correct_source: 光の処刑
 correct_reading: ひかり しょけい
+correct_ruby_mode: normal
 ```
 
 留空表示这不是振假名，保持原文。
@@ -384,10 +388,24 @@ toaru_terms_auto_ruby_review.csv
 raw_source        原始 wiki 术语
 cleaned_source    自动清洗后的术语
 reading           被剥离出的读音
+ruby_mode         normal 表示普通读音，special 表示义训/特殊读音
+rich_source       机器保留用 ruby HTML
+rich_zh           中文 ruby HTML，普通读音默认留空
 needs_review      默认 yes
 ```
 
 如果你发现某条自动清洗错了，就以 `raw_source` 或你手动填写的版本为准，不要把那条当作 confirmed。
+
+整理后的主表 `toaru_terms_cleaned.csv` 也会包含：
+
+```text
+ruby_mode=none       没有振假名
+ruby_mode=normal     普通读音，默认不进入中文正文
+ruby_mode=special    义训/特殊读音，后续 EPUB 可保留 ruby
+ruby_mode=uncertain  不确定，等人工判断
+rich_source          原文 ruby HTML，例如 <ruby>上条当麻<rt>かみじょう とうま</rt></ruby>
+rich_zh              中文 ruby HTML；普通读音默认空，特殊读音可手动填
+```
 
 ### 4.7. 生成翻译用术语表
 

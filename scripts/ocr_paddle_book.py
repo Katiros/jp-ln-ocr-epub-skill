@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any
 
 from env_bootstrap import configure_skill_local_env
+from group_ruby_candidates import FIELDS as RUBY_GROUP_FIELDS
+from group_ruby_candidates import group_rows as group_ruby_rows
 
 SKIP_KINDS_DEFAULT = {"cover", "illustration", "blank"}
 KANA_ONLY = re.compile(r"^[ぁ-ゖァ-ヴーー]+$")
@@ -386,6 +388,15 @@ def write_ruby_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows({field: row.get(field, "") for field in fields} for row in rows)
 
 
+def write_grouped_ruby_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    grouped = group_ruby_rows([{key: str(value) for key, value in row.items()} for row in rows])
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=RUBY_GROUP_FIELDS)
+        writer.writeheader()
+        writer.writerows({field: row.get(field, "") for field in RUBY_GROUP_FIELDS} for row in grouped)
+
+
 def image_area(page: dict[str, Any]) -> float | None:
     width = page.get("width")
     height = page.get("height")
@@ -583,6 +594,7 @@ def cmd_ocr(args: argparse.Namespace) -> None:
     write_json(manifest_path, manifest)
     write_quality_report(output_dir, manifest, confidence_threshold)
     write_ruby_csv(output_dir / "logs" / "ruby_candidates.csv", all_ruby_rows)
+    write_grouped_ruby_csv(output_dir / "logs" / "ruby_candidates_grouped.csv", all_ruby_rows)
     if errors:
         write_json(output_dir / "logs" / "errors.json", errors)
 

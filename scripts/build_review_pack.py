@@ -122,6 +122,9 @@ def write_glossary_review(output_dir: Path, review_dir: Path) -> None:
     ocr_ruby_src = output_dir / "logs" / "ruby_candidates.csv"
     ocr_ruby_dst = review_dir / "ruby_candidates.csv"
     ocr_ruby_copied = copy_if_exists(ocr_ruby_src, ocr_ruby_dst)
+    grouped_ruby_src = output_dir / "logs" / "ruby_candidates_grouped.csv"
+    grouped_ruby_dst = review_dir / "ruby_candidates_grouped.csv"
+    grouped_ruby_copied = copy_if_exists(grouped_ruby_src, grouped_ruby_dst)
     inline_ruby_src = output_dir / "logs" / "ruby_inline_review.csv"
     inline_ruby_dst = review_dir / "ruby_inline_review.csv"
     inline_ruby_copied = copy_if_exists(inline_ruby_src, inline_ruby_dst)
@@ -150,6 +153,8 @@ def write_glossary_review(output_dir: Path, review_dir: Path) -> None:
         lines.append("- 已生成过滤明细：`glossary_for_translation_rejected.csv`，可查看哪些碎片没有进入翻译。")
     if ocr_ruby_copied:
         lines.append("- 已复制 OCR 阶段剥离的振假名候选：`ruby_candidates.csv`。")
+    if grouped_ruby_copied:
+        lines.append("- 已复制合并后的振假名审阅表：`ruby_candidates_grouped.csv`。优先看这份。")
     if inline_ruby_copied:
         lines.append("- 已复制 clean 阶段文本内剥离的振假名记录：`ruby_inline_review.csv`。")
     (review_dir / "glossary_review.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -172,6 +177,7 @@ def write_readme(output_dir: Path, review_dir: Path) -> None:
         ("low_confidence_pages.md", "低置信度、OCR 错误和建议复核页面。"),
         ("cleanup_warnings.md", "疑似 ruby 混入、异常 OCR 行等清洗警告。"),
         ("ruby_candidates.csv", "OCR 几何阶段剥离出正文的振假名候选。"),
+        ("ruby_candidates_grouped.csv", "按相邻位置合并后的振假名候选，优先审阅这份。"),
         ("ruby_inline_review.csv", "clean 阶段从同一行文本中剥离的内嵌振假名记录。"),
         ("glossary_candidates.csv", "自动抽取的人名/术语候选，需要人工确认。"),
         ("wiki_glossary_candidates.csv", "从 wiki 预填充的人名/术语候选，需要人工确认。"),
@@ -231,6 +237,7 @@ def main() -> None:
     copy_if_exists(output_dir / "logs" / "quality_report.md", review_dir / "quality_report.md")
     copy_if_exists(output_dir / "logs" / "cleanup_warnings.md", review_dir / "cleanup_warnings.md")
     copy_if_exists(output_dir / "logs" / "ruby_candidates.csv", review_dir / "ruby_candidates.csv")
+    copy_if_exists(output_dir / "logs" / "ruby_candidates_grouped.csv", review_dir / "ruby_candidates_grouped.csv")
     copy_if_exists(output_dir / "logs" / "ruby_inline_review.csv", review_dir / "ruby_inline_review.csv")
     copy_if_exists(output_dir / "00_manifest" / "chapter_boundaries.json", review_dir / "chapter_boundaries.json")
     write_low_confidence(output_dir, review_dir, args.confidence_threshold)

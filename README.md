@@ -182,9 +182,10 @@ epub:
 03_ordered_jp/   剥离疑似振假名后、竖排排序后的每页日文
 logs/quality_report.md
 logs/ruby_candidates.csv
+logs/ruby_candidates_grouped.csv
 ```
 
-默认会把“小字号、纯假名、贴近正文列”的 OCR 框从正文流里剥离，避免振假名进入后续翻译。被剥离的内容不会丢失，会写入 `logs/ruby_candidates.csv` 和 `02_ocr_raw/ruby_candidates/` 供复核。如果你需要保留原始振假名进入 `03_ordered_jp/`，运行 OCR 时加 `--keep-ruby-candidates`。
+默认会把“小字号、纯假名、贴近正文列”的 OCR 框从正文流里剥离，避免振假名进入后续翻译。被剥离的内容不会丢失，会写入 `logs/ruby_candidates.csv` 和 `02_ocr_raw/ruby_candidates/` 供追溯；人工审阅时优先看 `logs/ruby_candidates_grouped.csv`，它会把相邻的 OCR 小框合并成更接近“一个词的振假名”的记录。如果你需要保留原始振假名进入 `03_ordered_jp/`，运行 OCR 时加 `--keep-ruby-candidates`。
 
 ### 3. 清洗 OCR 并抽取术语候选
 
